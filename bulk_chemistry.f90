@@ -1,9 +1,9 @@
-!DEC$ DEFINE LINUX           ! WINDOWS or LINUX
-!DEC$ DEFINE INTEL_COMPILER  ! INTEL_COMPILER or VISUAL_COMPILER or GNU_COMPILER
+!DEC$ DEFINE WINDOWS           ! WINDOWS or LINUX
+!DEC$ DEFINE GNU_COMPILER	!! INTEL_COMPILER or VISUAL_COMPILER or GNU_COMPILER
 program bulk_model
 use modchem
 !DEC$ IF DEFINED (VISUAL_COMPILER)
-   USE DFLIB
+!   USE DFLIB
 !DEC$ ENDIF
 implicit none
 !
@@ -213,8 +213,8 @@ implicit none
   
 
   !DEC$ IF DEFINED (LINUX)
-    character(len=1) :: dirsep ='/'
-    character(len=3) :: kopie = 'cp '
+  ! character(len=1) :: dirsep ='/'
+  ! character(len=3) :: kopie = 'cp '
   !DEC$ ELSE !WINDOWS
     character(len=1) :: dirsep ='\'
     character(len=5) :: kopie = 'copy '
@@ -405,27 +405,27 @@ implicit none
 
   !with use DFLIB NARGS() visual fortran 6 on windows
   !DEC$ IF DEFINED (VISUAL_COMPILER)
-    if ( NARGS ()<= 1 ) then
-      inputchemfile = 'chem.inp'
-    else
-      call getarg(1,inputchemfile)
-    endif
+  !  if ( NARGS ()<= 1 ) then
+  !    inputchemfile = 'chem.inp'
+  !  else
+  !    call getarg(1,inputchemfile)
+  !  endif
   !DEC$ ENDIF
 
   !DEC$ IF DEFINED (INTEL_COMPILER )
-    if ( iargc ()< 1 ) then
-      inputchemfile = 'chem.inp'
-    else
-      call getarg(1,inputchemfile,n)
-    endif
+  !  if ( iargc ()< 1 ) then
+  !   inputchemfile = 'chem.inp'
+  !  else
+  !    call getarg(1,inputchemfile,n)
+  !  endif
   !DEC$ ENDIF
 
   !GNU fortran on Windows and Linux ?
-  !  if ( COMMAND_ARGUMENT_COUNT () > 0) then
-  !    CALL GET_COMMAND_ARGUMENT(1,inputchemfile)
-  !  else
-  !    inputchemfile = 'chem.inp'
-  !  endif
+    if ( COMMAND_ARGUMENT_COUNT () > 0) then
+      CALL GET_COMMAND_ARGUMENT(1,inputchemfile)
+    else
+      inputchemfile = 'chem.inp'
+    endif
 
   open (1, file='namoptions')
   read (1,NAMRUN,iostat=ierr)
@@ -819,14 +819,14 @@ implicit none
       esatsurf    = 0.611e3 * exp(17.2694 * (thetasurf - 273.16) / (thetasurf - 35.86))
       qsatsurf    = 0.622 * esatsurf / (pressure*100)
       cq          = 0.0
-      if(t/=1) cq = (1. + Cs * ueff * rs) ** -1.
+      if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
       qsurf       = (1. - cq) * qm(1) + cq * qsatsurf * 1.e3 !HGO factor for qsatsurf which is in kg/kg
 
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
 
       Rib         = min(0.2,g/thetav * zsl * (thetav-thetavsurf) / (ueff ** 2.))
-      L           = sign(0.01,Rib)
-      L0          = sign(0.1,Rib)
+      L           = sign(dble(0.01),Rib)
+      L0          = sign(dble(0.1),Rib)
 
       iter        = 0
       do while(.true.)
@@ -840,8 +840,8 @@ implicit none
         L         = L - fx / fxdif
         L         = sign(min(abs(L),1.e6),L)!capping L
 
-        if(abs((L - L0)/L) < 1e-4) exit 
-        if(abs((L - L0)) < 1e-3) exit 
+        if(abs((L - L0)/L) < 1e-4) exit
+        if(abs((L - L0)) < 1e-3) exit
       enddo
 
       Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
@@ -851,7 +851,7 @@ implicit none
       if(ustar .le. 0) stop "ustar has to be greater than 0"
       uws    = - Constm * ueff * um(1)
       vws    = - Constm * ueff * vm(1)
-      
+
       T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
       q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
       u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
@@ -863,7 +863,7 @@ implicit none
     else !lsurfacelayer
       ! Two options are considered regarding the momentum surface fluxes.
       ! Introduce time-dependent uws ,vws and ustar (z0 constant) or constant momentum fluxes.
-      
+
       ! --------------------------------------------------------------
 
       if (c_ustr) then
@@ -887,7 +887,7 @@ implicit none
         uws=-ustar**2.*cos(alpha)
         vws=-ustar**2.*sin(alpha)
 
-      endif
+    endif
 
     endif !lsurfacelayer
 
