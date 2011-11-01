@@ -1,0 +1,139 @@
+&NAMRUN
+outdir          = 'Advectiontrue'
+time            = 36000 
+dtime           = 60
+atime           = 60
+atime_vert      = 1800
+h_max           = 2000
+latt            = 51.97
+long            = 4.926244
+day             = 126
+hour            = 0
+/
+
+&NAMDYN
+zi0             = 1000.0
+beta            = 0.2
+wsls            = 0.0e-05
+wthetasmax      = 0.0
+c_fluxes        = .false.
+gamma           = 0.006
+thetam0         = 288.7
+dtheta0         = 0.4 
+advtheta        = 1.0e-5 
+pressure        = 1013.0
+wqsmax          = 0.0
+gammaq          = -0.002
+qm0             = 6.5
+dq0             = -0.0
+advq            = 2.0e-5 
+ladvecFT        = .true.
+wcsmax          = -0.36
+gammac          = 0.0
+cm0             = 392e3
+dc0             = -30.0e3
+z0              = 0.15
+uws0            = 0.00
+vws0            = 0
+gammau          = 0.00
+gammav          = 0
+um0             = 4.0
+vm0             = 0
+ug              = 0.0
+vg              = 0
+/
+
+&NAMCHEM
+lchem           = .false.
+lcomplex        = .false.
+lwritepl        = .true.
+ldiuvar         = .true.
+h_ref           = 12.
+lflux           = .false.
+fluxstart       = 5.
+fluxend         = 17.
+lchconst        = .true.
+t_ref_cbl       = 298.
+p_ref_cbl       = 1000
+q_ref_cbl       = 10.0
+t_ref_ft        = 298.
+p_ref_ft        = 1000.
+q_ref_ft        = 10.0
+!pressure_ft     = 1013.0
+/
+
+&NAMFLUX
+!offset_wt       = 0
+!offset_wq       = 0
+!function_wt     = 2
+!function_wq     = 0
+!starttime_wt    = 3600
+!endtime_wt      = 18000
+!starttime_wq    = 39600
+!endtime_wq      = 54000
+!starttime_chem  = 46800
+!endtime_chem    = 54000
+!starttime_adv   = 3600
+!endtime_adv     = 54000
+/
+
+&NAMSURFLAYER
+lsurfacelayer   = .true.
+z0m             = 0.05
+z0h             = 0.01
+/
+
+&NAMRAD
+lradiation = .true.
+cc         = 0.0
+S0         = 1376.
+albedo     = 0.27326
+/
+
+&NAMSURFACE
+llandsurface = .false.
+Qtot         = -1000000
+Ts           = 287.2
+w2           = 0.43
+wg           = 0.43
+wwilt        = 0.314
+wfc          = 0.491
+wsat         = 0.6
+CLa          = 0.083
+CLb          = 11.4
+CLc          = 12.0
+C1sat        = 0.342
+C2ref        = 0.3
+gD           = 0.0
+rsmin        = 110
+rssoilmin    = 50
+LAI          = 2
+cveg         = 1.0
+Tsoil        = 287.2
+T2           = 285.0
+Wl           = 0e-4
+Lambda       = 6
+CGsat        = 3.6e-6
+lrsAgs       = .false.
+lCO2Ags      = .false.
+CO2comp298   = 68.5
+Q10CO2       = 1.5
+gm298        = 7.0            
+Ammax298     = 2.2            
+Q10gm        = 2.0            
+T1gm         = 278.           
+T2gm         = 301.           
+Q10Am        = 2.0            
+T1Am         = 281.           
+T2Am         = 311.           
+f0           = 0.89           
+ad           = 0.07           
+alpha0       = 0.017          
+Kx           = 0.7            
+gmin         = 0.25e-3   
+Cw           = 0.0016
+wsmax        = 0.55  
+wsmin        = 0.005 
+R10          = 0.23  
+Eact0        = 53.3e3
+/
