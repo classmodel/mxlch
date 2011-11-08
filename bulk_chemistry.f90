@@ -1516,7 +1516,7 @@ implicit none
         ,cm(2), dc(2), wce, wcs, betac
 
       if(lchem)then
-        write(formatstring,'(A,i2,A)') '(2F14.4,',nchsp ,'E14.5)'
+        write(formatstring,'(A,i2,A)') '(2F14.4,',nchsp ,'E15.5E3)'
 
         write (40,formatstring) &
           thour,printhour,(c_cbl(k),k=1,nchsp)
