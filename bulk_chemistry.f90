@@ -499,6 +499,21 @@ implicit none
     print *,""
     print *,""
   endif
+  if (lchem .and. (dtime .gt. 2.)) then
+    dtime = 2.
+    print *,""
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,"You enabled lchem with dtime > 2 seconds!"
+    print *,"This might result in unstable chemistry results"
+    print *,"dtime set to 2 seconds"
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,""
+  endif
+
 
   write(formatstring,'(a,a)')'mkdir ',trim(outdir)
   call system(formatstring)
