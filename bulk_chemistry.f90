@@ -1,12 +1,13 @@
-!DEC$ DEFINE LINUX           ! WINDOWS or LINUX
-!DEC$ DEFINE INTEL_COMPILER  ! INTEL_COMPILER or VISUAL_COMPILER or GNU_COMPILER
 program bulk_model
 use modchem
-!DEC$ IF DEFINED (VISUAL_COMPILER)
-   USE DFLIB
-!DEC$ ENDIF
+! USE DFLIB
 implicit none
-!
+
+! --------------------------------------------
+! Defines platform (MS Windows vs Linux/OSX)
+  logical              :: windows = .false.
+! --------------------------------------------
+
 ! From Tennekes and Driedonks,
 ! Boundary Layer Meteorology (1981), 515-531
 !
@@ -210,16 +211,22 @@ implicit none
   ! 2  =  sinoid flux from starttime to endtime
   ! 3  =  constant flux froms tarttime to endtime
   integer function_wT, function_wq   
-  
 
+  character(len=1) dirsep
+  character(len=5) kopie
+
+  ! !!!!!!!!!!!!!!!!!!!!
+  ! No longer used, see below declaration namelist
+  ! BvS, nov2011
+  ! !!!!!!!!!!!!!!!!!!!!
   !DEC$ IF DEFINED (LINUX)
-    character(len=1) :: dirsep ='/'
-    character(len=3) :: kopie = 'cp '
+  !  character(len=1) :: dirsep ='/'
+  !  character(len=3) :: kopie = 'cp '
   !DEC$ ELSE !WINDOWS
-    character(len=1) :: dirsep ='\'
-    character(len=5) :: kopie = 'copy '
+  !  character(len=1) :: dirsep ='\'
+  !  character(len=5) :: kopie = 'copy '
   !DEC$ ENDIF
-
+  
   ! general options
   namelist/NAMRUN/ &
     outdir, &
@@ -360,6 +367,14 @@ implicit none
     function_wT   , &
     function_wq   
 
+  if (windows) then
+    dirsep = '\'
+    kopie = 'copy '
+  else
+    dirsep ='/'
+    kopie = 'cp '
+  end if
+
   ! some variables
   inf     = 1.0e-9        ! Correction to avoid divide by 0 if z0=0
   eps     = 1.0e-4        ! Correction to avoid crashing with plots
@@ -405,27 +420,30 @@ implicit none
 
   !with use DFLIB NARGS() visual fortran 6 on windows
   !DEC$ IF DEFINED (VISUAL_COMPILER)
-    if ( NARGS ()<= 1 ) then
-      inputchemfile = 'chem.inp'
-    else
-      call getarg(1,inputchemfile)
-    endif
+  !  if ( NARGS ()<= 1 ) then
+  !    inputchemfile = 'chem.inp'
+  !  else
+  !    call getarg(1,inputchemfile)
+  !  endif
   !DEC$ ENDIF
 
+  !New Intel compilers also take GET_COMMAND_ARGUMENT
   !DEC$ IF DEFINED (INTEL_COMPILER )
-    if ( iargc ()< 1 ) then
-      inputchemfile = 'chem.inp'
-    else
-      call getarg(1,inputchemfile,n)
-    endif
+  !  if ( iargc ()< 1 ) then
+  !    inputchemfile = 'chem.inp'
+  !  else
+  !    call getarg(1,inputchemfile,n)
+  !  endif
   !DEC$ ENDIF
 
   !GNU fortran on Windows and Linux ?
-  !  if ( COMMAND_ARGUMENT_COUNT () > 0) then
-  !    CALL GET_COMMAND_ARGUMENT(1,inputchemfile)
-  !  else
-  !    inputchemfile = 'chem.inp'
-  !  endif
+  ! Works both with ifort and gnu fortran, don't know about visual
+  ! BvS, nov2011
+    if ( COMMAND_ARGUMENT_COUNT () > 0) then
+      CALL GET_COMMAND_ARGUMENT(1,inputchemfile)
+    else
+      inputchemfile = 'chem.inp'
+    endif
 
   open (1, file='namoptions')
   read (1,NAMRUN,iostat=ierr)
@@ -834,7 +852,7 @@ implicit none
       esatsurf    = 0.611e3 * exp(17.2694 * (thetasurf - 273.16) / (thetasurf - 35.86))
       qsatsurf    = 0.622 * esatsurf / (pressure*100)
       cq          = 0.0
-      if(t/=1) cq = (1. + Cs * ueff * rs) ** -1.
+      if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
       qsurf       = (1. - cq) * qm(1) + cq * qsatsurf * 1.e3 !HGO factor for qsatsurf which is in kg/kg
 
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
@@ -1526,7 +1544,7 @@ implicit none
         ustar,uws, vws, uwe, vwe, du(2), dv(2), &
         sqrt(du(2)**2+dv(2)**2)
 
-      write (60,'(2F14.4,5F14.4,6E14.5)') thour,printhour, zi(2) &
+      write (60,'(2F14.4,5F14.4,6E15.5)') thour,printhour, zi(2) &
         ,qm(2), dq(2), wqe, wqs, betaq &
         ,cm(2), dc(2), wce, wcs, betac
 

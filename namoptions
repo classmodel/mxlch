@@ -44,7 +44,7 @@ vg              = 0
 /
 
 &NAMCHEM
-lchem           = .false.
+lchem           = .true.
 lcomplex        = .false.
 lwritepl        = .true.
 ldiuvar         = .true.
