@@ -721,7 +721,7 @@ implicit none
             'wqs','   betaq','  cm(ppm)','dc(ppm)', 'wce','wcs','  betac'
 
   if(lchem)then
-    write(formatstring,'(A,i2,A4)')'(',nchsp+2,'A14)'    !nchsp + 2 places for the 2 times
+    write(formatstring,'(A,i2,A)')'(',nchsp+2,'A15)'    !nchsp + 2 places for the 2 times
     open (40, file=trim(outdir)//dirsep//'chem_conc')
       write (40, '(a4)') 'CHEM'
       write (40,'(I4)') time/atime
@@ -1549,7 +1549,7 @@ implicit none
         ,cm(2), dc(2), wce, wcs, betac
 
       if(lchem)then
-        write(formatstring,'(A,i2,A)') '(2F14.4,',nchsp ,'E15.5E3)'
+        write(formatstring,'(A,i2,A)') '(2E15.5E3,',nchsp ,'E15.5E3)'
 
         write (40,formatstring) &
           thour,printhour,(c_cbl(k),k=1,nchsp)
