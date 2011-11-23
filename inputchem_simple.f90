@@ -5,7 +5,7 @@ use modchem
 implicit none
 
   character*25 inputchemfile
-  character*15 outdir
+  character*25 outdir
   character*1  dirsep
 
   integer i,j,k,l,react,max_reactions
@@ -66,7 +66,7 @@ implicit none
           !with the intel compiler the next read statement stops when it
           !sees a end of line but xlf(Huygens) and gfortran don't stop and reads garbage
           !so we fill all with spaces and test later which are filled
-      do i=1,15
+      do i=1,25
         spec(i)='           '
       enddo
 
@@ -76,7 +76,7 @@ implicit none
           ! the above 2 statements only work correctly with intel fortran
 
       i=1
-      do while (len_trim(spec(i))>0 .and. i<15)
+      do while (len_trim(spec(i))>0 .and. i<25)
         ! print *,i, spec(i),len_trim(spec(i))
         i=i+1
       end do
