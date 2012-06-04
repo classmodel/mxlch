@@ -858,8 +858,8 @@ implicit none
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
 
       Rib         = min(0.2,g/thetav * zsl * (thetav-thetavsurf) / (ueff ** 2.))
-      L           = sign(0.01,Rib)
-      L0          = sign(0.1,Rib)
+      L           = sign(dble(0.01),Rib)
+      L0          = sign(dble(0.1),Rib)
 
       iter        = 0
       do while(.true.)
@@ -1573,7 +1573,7 @@ implicit none
         if(lwritepl) then
           do i=1,nchsp
             if((.not. lcomplex).or.(PL_scheme(i)%prin)) then
-              write (formatstring,'(A,i3,A6)')'(f8.3,f8.3,',PL_scheme(i)%nr_PL +3,'E13.4)'
+              write (formatstring,'(A,i3,A9)')'(f8.3,f8.3,',PL_scheme(i)%nr_PL +3,'E15.10E3)'
               write(100+i,formatstring),thour,printhour,c_cbl(i),(productionloss(i,k),k=1,PL_scheme(i)%nr_PL+2)
             endif  
           enddo
