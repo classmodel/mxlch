@@ -226,7 +226,7 @@ implicit none
               if (PL_scheme(n)%PL(j)%PorL == PRODUCTION ) then
                 productionloss(n,j) = YPL
               else
-                productionloss(n,j) = YPL * current(n)
+                productionloss(n,j) = YPL * ynew(n)
               endif
             endif
           endif
@@ -237,7 +237,7 @@ implicit none
        
        if (lwritepl) then
          if (switch == CBL)then
-           productionloss(n, PL_scheme(n)%nr_PL + 1)= YL*current(n)
+           productionloss(n, PL_scheme(n)%nr_PL + 1)= YL*ynew(n)
            productionloss(n, PL_scheme(n)%nr_PL + 2)= YP
          endif
        endif
