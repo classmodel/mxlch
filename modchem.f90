@@ -123,6 +123,7 @@ type (Reaction),allocatable ::reactions(:)
 type (Name_Number), allocatable :: PL_temp(:)
 integer, allocatable ::plot(:)
 double precision, allocatable :: c_cbl(:),c_ft(:)  ! 0:nchsp to create dummy space
+double precision, allocatable :: adv_chem_cbl(:),adv_chem_ft(:)  ! 0:nchsp to create dummy space
 double precision, allocatable :: beta_ft(:),beta_ft_p(:)
 double precision, allocatable :: Q_cbl(:), Q_init(:),E(:)
 double precision, allocatable :: c_current(:)

@@ -25,7 +25,7 @@ implicit none
   character*255 line,line1
   character*255 scalarline
   character*8, allocatable::chem_name(:)
-  logical prod,found
+  logical prod,found,ladvecchem
   character (len=8) tempname
   character (len=8) name
   character (len=3) react_str
@@ -38,6 +38,8 @@ implicit none
   number = 0
   count_raddep = 0
 
+  ladvecchem=.false.
+
   open (unit=10,file='chemicals.txt',err=100,status='old',form='formatted')
 
   do while(.true.)
@@ -45,7 +47,12 @@ implicit none
     if (line(1:1)=='#')then
       print *, line
     elseif (line(1:1)=='%')then
-      read(line(2:10),*)nchsp        !read number of chemicals
+      if (line(2:2)=='A')then
+        ladvecchem = .true.
+        read(line(3:10),*)nchsp
+      else
+        read(line(2:10),*)nchsp        !read number of chemicals
+      endif
       call allocate_arrays1()         ! allocate space
       allocate(chem_name(nchsp))
     elseif (len(trim(line))== 0)then
@@ -55,11 +62,21 @@ implicit none
       exit  !do while
     else
       number = number + 1
-      read(line,*)chem_name(number),c_cbl(number),c_ft(number),Q_init(number),Q_func(number),plot(number)
+      if(ladvecchem) then
+        read(line,*)chem_name(number),c_cbl(number),c_ft(number),Q_init(number),Q_func(number),plot(number),adv_chem_cbl(number),adv_chem_ft(number)
+      else
+        read(line,*)chem_name(number),c_cbl(number),c_ft(number),Q_init(number),Q_func(number),plot(number)
+      endif
     endif  
   end do   
   close(10)
   Q_cbl= Q_init
+
+  if (ladvecchem .eqv. .false.) then
+    adv_chem_cbl(:)=0.0
+    adv_chem_ft( :)=0.0
+  endif
+
   call read_chem_mozart(chem_name)
   
   
@@ -821,12 +838,16 @@ implicit none
   ! so if we use an unidentified reactions and/or component in a reaction we don't have problems. The value of concentrations will be set to 1
   allocate (plot(0:nchsp))
   allocate (c_cbl(0:nchsp),c_ft(0:nchsp))
+  allocate (adv_chem_cbl(0:nchsp),adv_chem_ft(0:nchsp))
   allocate (beta_ft(0:nchsp))
   allocate (Q_cbl(0:nchsp),Q_init(0:nchsp),E(0:nchsp))
   allocate (Q_func(0:nchsp))
   allocate (c_current(0:nchsp))
   allocate (PL_scheme(nchsp), PL_temp(nchsp))
   allocate (productionloss(nchsp,mrpcc+2))!+2 for total production and loss terms
+
+  adv_chem_cbl(:)=0.0
+  adv_chem_ft( :)=0.0
 
   PL_scheme(1)%name = '     '
   PL_scheme(1)%active = .false.

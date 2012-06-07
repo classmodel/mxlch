@@ -47,7 +47,9 @@ implicit none
           allocate(chem_name(nchsp))
     elseif (line(1:1) == '@') then
       call read_chem_simple(chem_name)
-      elseif (len(trim(line))== 0)then
+    elseif (line(1:1)=='A')then !Advection
+      call read_advection()
+    elseif (len(trim(line))== 0)then
           !empty line do nothing
     elseif (line(1:1) == '$') then
     !end of chemical reactions
@@ -709,6 +711,8 @@ implicit none
   Q_cbl(0)=1.
   E(0)=1.
   c_current(0)=1
+  adv_chem_cbl(0)=0.0
+  adv_chem_ft(0)=0.0
 
   !chem species
   read(10,'(a)',end=400)scalarline
@@ -760,6 +764,24 @@ implicit none
   end
 
 
+  subroutine read_advection()
+  use modchem
+  implicit none
+
+  character*512 scalarline
+  integer j
+
+  read(10,'(a)',err=400)scalarline
+  read(scalarline,*)(adv_chem_cbl(j),j=1,nchsp)
+
+  read(10,'(a)',err=400)scalarline
+  read(scalarline,*)(adv_chem_ft(j),j=1,nchsp)
+
+  400  print *, 'error in reading advection in inputchem'
+
+  end subroutine
+
+
   subroutine allocate_arrays()
   use modchem
   implicit none
@@ -770,12 +792,16 @@ implicit none
   allocate (reactions(tnor))
   allocate (RC(0:tnor))
   allocate (c_cbl(0:nchsp),c_ft(0:nchsp))
+  allocate (adv_chem_cbl(0:nchsp),adv_chem_ft(0:nchsp))
   allocate (beta_ft(0:nchsp))
   allocate (Q_cbl(0:nchsp),Q_init(0:nchsp),E(0:nchsp))
   allocate (Q_func(0:nchsp))
   allocate (c_current(0:nchsp))
   allocate (PL_scheme(nchsp), PL_temp(nchsp))
   allocate (productionloss(nchsp,mrpcc+2))!+2 for total production and loss terms
+
+  adv_chem_cbl(:)=0.0
+  adv_chem_ft( :)=0.0
 
   PL_scheme(1)%name = '     '
   PL_scheme(1)%active = .false.

@@ -1478,7 +1478,10 @@ implicit none
       do k=1, nchsp
         E(k)=-we*(c_ft(k)-c_cbl(k))
         c_cbl(k)=c_cbl(k)+(1/zi(1))*(Q_cbl(k)-E(k))*dtime
+        c_cbl(k)=c_cbl(k)+adv_chem_cbl(k)*dtime
+        c_ft( k)=c_ft( k)+adv_chem_ft(k )*dtime
         c_cbl(k) = max(0.0, c_cbl(k) )
+        c_ft( k) = max(0.0, c_ft( k) )
 
         if (Q_cbl(k) == 0.) then
           beta_ft(k)=0
@@ -1502,9 +1505,9 @@ implicit none
       endif
 
       if(lcomplex) then
-        call calc_K_mozart(pressure, real(temp_cbl + (zi(2)/2) * 0.010), real(temp_ft + zi(2) * 0.010) ) !Accounting for dry adiabatic lapse rate
+        call calc_K_mozart(pressure, real(temp_cbl + (zi(2)/2) * gammad), real(temp_ft + zi(2) * gammad) ) !Accounting for dry adiabatic lapse rate
       else
-        call calc_K_simple(pressure, temp_cbl + (zi(2)/2) * 0.010, temp_ft + zi(2) * 0.010) !Accounting for dry adiabatic lapse rate
+        call calc_K_simple(pressure, temp_cbl + (zi(2)/2) * gammad, temp_ft + zi(2) * gammad) !Accounting for dry adiabatic lapse rate
       endif
 
 !     solve the chemistry gas phase
