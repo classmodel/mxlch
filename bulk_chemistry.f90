@@ -771,7 +771,7 @@ implicit none
             endif
           enddo
           open(100+i,FILE=trim(filename))
-          write(formatstring,'(A,i3,A4)')'(',PL_scheme(i)%nr_PL+4,'A13)'
+          write(formatstring,'(A,i3,A4)')'(',PL_scheme(i)%nr_PL+4,'A17)'
           write(100+i,formatstring) 'RT(hours)','['//trim(PL_scheme(i)%name)//']',(dummy(j)//RC(PL_scheme(i)%PL(j)%r_nr)%rname,j=1,PL_scheme(i)%nr_PL),'tot_loss','tot_prod'
         endif  
       enddo
@@ -1576,7 +1576,7 @@ implicit none
         if(lwritepl) then
           do i=1,nchsp
             if((.not. lcomplex).or.(PL_scheme(i)%prin)) then
-              write (formatstring,'(A,i3,A6)')'(f8.3,f8.3,',PL_scheme(i)%nr_PL +3,'E13.4)'
+              write (formatstring,'(A,i3,A6)')'(f8.3,f8.3,',PL_scheme(i)%nr_PL +3,'E17.8)'
               write(100+i,formatstring),thour,printhour,c_cbl(i),(productionloss(i,k),k=1,PL_scheme(i)%nr_PL+2)
             endif  
           enddo
