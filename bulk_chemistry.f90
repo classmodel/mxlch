@@ -858,8 +858,8 @@ implicit none
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
 
       Rib         = min(0.2,g/thetav * zsl * (thetav-thetavsurf) / (ueff ** 2.))
-      L           = sign(0.01,Rib)
-      L0          = sign(0.1,Rib)
+      L           = sign(dble(0.01),Rib)
+      L0          = sign(dble(0.1),Rib)
 
       iter        = 0
       do while(.true.)
