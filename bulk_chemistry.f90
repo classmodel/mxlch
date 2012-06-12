@@ -100,6 +100,7 @@ implicit none
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
   double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03
+  logical :: lenhancedentrainment=.false.
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -244,6 +245,7 @@ implicit none
   namelist/NAMDYN/ &
     zi0, &
     beta, &
+    lenhancedentrainment, &
     wsls, &
     wthetasmax, &
     c_wth, &
@@ -1251,10 +1253,13 @@ implicit none
 !   jump depending on the virtual temperature jump
       dthetav = dtheta(1) + &
       1.e-03*rvrd*(qm(1)*dtheta(1)+thetam(1)*dq(1)+dtheta(1)*dq(1))
-      we = (beta*wthetav/dthetav) 
+      we = (beta*wthetav/dthetav)
+      if (lenhancedentrainment) then
+        we = we + 5. * (ustar**3.) * thetav / (g * zi(1) * dthetav)
+      endif
       
-      zi(2)  =zi(1)+((beta*wthetav/dthetav)+ws)*dtime            !eq (8)
-      dtheta(2)=dtheta(1)+ ((gamma*beta*wthetav/dthetav)- &
+      zi(2)  =zi(1)+(we+ws)*dtime            !eq (8)
+      dtheta(2)=dtheta(1)+ ((gamma*we)- &
               (1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime           !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
       thetam(2)=thetam(1)+ &
