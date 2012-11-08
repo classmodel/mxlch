@@ -1041,7 +1041,7 @@ implicit none
 
           ! 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
           AGSa1    = 1.0 / (1 - f0)
-          Dstar    = D0 / (AGSa1 - 1)
+          Dstar    = D0 / (AGSa1 * (f0-fmin))
 
           gcco2    = LAI * (gmin/nuco2q + AGSa1 * fstr * An / ((co2abs - CO2comp) * (1 + Ds / Dstar)))
 
@@ -1052,7 +1052,7 @@ implicit none
           rs       = rsAgs
 
           ! calculate net flux of CO2 into the plant (An)
-          An       = -(co2abs - ci) / (ra + rsAgs)
+          An       = -(co2abs - ci) / (ra + rsCO2)
 
           ! CO2 soil respiration surface flux
           fw       = Cw * wsmax / (wg + wsmin)
