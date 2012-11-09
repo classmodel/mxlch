@@ -1041,7 +1041,7 @@ implicit none
 
           ! 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
           AGSa1    = 1.0 / (1 - f0)
-          Dstar    = D0 / (AGSa1 * (f0 - fmin))
+          Dstar    = D0 / (AGSa1 * (f0-fmin))
 
           gcco2    = LAI * (gmin/nuco2q + AGSa1 * fstr * An / ((co2abs - CO2comp) * (1 + Ds / Dstar)))
 
