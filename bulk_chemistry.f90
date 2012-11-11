@@ -156,6 +156,14 @@ implicit none
   double precision :: Cw = 1.6e-3,wsmax=0.55,wsmin=0.005,R10=0.23,Eact0=53.3e3
   double precision :: betac,wcs,gammac = 0.0,cm0 = 0.0,dc0 = 0.0
 
+  ! Shallow cumulus
+  logical          :: lscu=.false.,lrelaxdz=.false.
+  double precision :: tau=200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
+  double precision :: q2=0,ac=0,wm=0,wqm=0  
+  double precision :: Ptop,Ttop,estop,etop,qstop,qqs
+  double precision :: ev,tempd,templcl,zlcl,RHlcl
+  integer          :: ii
+
   double precision pi
 
   !Define variables for the 'saturation level' program
@@ -275,7 +283,8 @@ implicit none
     advq, &
     advtheta, &
     ladvecFT, &
-    lencroachment
+    lencroachment, &
+    lscu
 
   namelist/NAMSURFLAYER/ &
     lsurfacelayer,&
@@ -678,9 +687,9 @@ implicit none
   open (20, file=trim(outdir)//dirsep//'output_dyn')
     write (20,'(a4)') 'TIME'
     write (20,'(I4)') time/atime
-    write (20,'(14a14)') 'UTC(hours)','RT(hours)','zi(m)','we(m/s)', &
+    write (20,'(17a14)') 'UTC(hours)','RT(hours)','zi(m)','we(m/s)', &
             'thetam(K)','dtheta(K)','wte(Km/s)','wts(Km/s)', &
-            'beta','um(ms-1)','du(ms-1)','vm(ms-1)','dv(ms-1)','ws(ms-1)'
+            'beta','um(ms-1)','du(ms-1)','vm(ms-1)','dv(ms-1)','ws(ms-1)','ac(-)','wm(ms-1)','dz(m)'
 
   open (28, file=trim(outdir)//dirsep//'t_prof')
     write (28,'(a4)') 'VERT'
@@ -718,9 +727,9 @@ implicit none
   open (60, file=trim(outdir)//dirsep//'output_sca')
     write (60,'(a4)') 'TIMS'
     write (60,'(I4)') time/atime
-    write (60,'(13a14)') &
+    write (60,'(15a14)') &
             'UTC(hours)','RT(h-ours)','zi(m)','qm(g/kg)','dq(g/kg)','wqe', &
-            'wqs','   betaq','  cm(ppm)','dc(ppm)', 'wce','wcs','  betac'
+            'wqs','   betaq','  cm(ppm)','dc(ppm)', 'wce','wcs','  betac','q2','wqm'
 
   if(lchem)then
     write(formatstring,'(A,i2,A)')'(',nchsp+2,'A15)'    !nchsp + 2 places for the 2 times
@@ -1233,7 +1242,6 @@ implicit none
       write (46,*)'  Q_cbl(RH%loc)   = Q_cbl * sin(pi * (sec-daytime_start)/daylenght)'
     endif
 
-
 !   subsidence velocity (large-scale advection)
     ws=-wsls*zi(1)
 !
@@ -1244,6 +1252,56 @@ implicit none
       lsq     = advq
       lstheta = advtheta
     endif
+
+!   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!          
+!   shallow cumulus
+!   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if(lscu) then
+      ! 1. calculate saturation deficit at zi 
+      Ptop     = (pressure*100.) / exp((g * zi(1))/(Rd * thetam(1)))
+      Ttop     = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / cp)))  
+      estop    = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
+      qstop    = (0.622 * estop) / Ptop
+      qqs      = (qm(1)/1000.) - qstop
+
+      ! 2. iterative solution LCL
+        !! solution differs from saturation routine MXLCH !!
+        !! Here we use mixed-layer averaged values for theta
+        !! saturation routine uses surface temp for start parcel
+        !! and thus yields a higer lcl
+      if(t.eq.1) then   ! Put random guess for lcl, RHlcl
+        zlcl   = zi(1)
+        RHlcl  = 0.5;
+      else              ! Perturb RHlcl to start iteration
+        RHlcl  = 0.9998;
+      end if
+      do ii=1,30        ! Puts limit on max amount of iterations, just to be sure...
+        zlcl   = zlcl + (1.-RHlcl) * 1000.
+        Ptop   = (pressure*100.) / exp((g * zlcl)/(Rd * thetam(1)))
+        Ttop   = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / cp)))  
+        estop  = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
+        etop   = (qm(1)/1000.) * Ptop / 0.622 
+        RHlcl  = etop / estop;
+        if((RHlcl .ge. 0.9999) .and. (RHlcl .le. 1.0001)) exit
+      end do
+
+      ! 3. iterate wqM and ac
+      wqm      = 0.
+      q2       = 1e-10
+      wm       = 0.
+      do ii=1,30        ! to-do: smarter iteration
+        if(dq(1) < 0 .and. wstar > 0) q2 = -((-we*(dq(1)/1000.))+wqm) * (dq(1)/1000.) * zi(1) / (dz * wstar)
+        if(q2 < 0)    q2 = 1e-10
+        ac     = max(0.,(0.5 + (0.36 * atan(1.55 * (((qm(1)/1000.) - qstop) / sqrt(q2))))))
+        wm     = ac * wstar
+        wqm    = ca * sqrt(q2) * wm
+      end do
+
+      ! 4. relaxe dz if(lrelaxdz)
+      if(lrelaxdz .and. ac>0) then
+        dz    = dz + ((1./2000.) * ((zlcl - zi(1))-dz)) * dtime
+      end if
+    end if
 
 !   dynamics eulerien time-step
 !   Potential temperature
@@ -1258,8 +1316,8 @@ implicit none
         we = we + 5. * (ustar**3.) * thetav / (g * zi(1) * dthetav)
       endif
       
-      zi(2)  =zi(1)+(we+ws)*dtime            !eq (8)
-      dtheta(2)=dtheta(1)+ ((gamma*we)- &
+      zi(2)  =zi(1)+(we+ws-wm)*dtime            !eq (8)
+      dtheta(2)=dtheta(1)+ ((gamma*(we-wm))- &
               (1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime           !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
       thetam(2)=thetam(1)+ &
@@ -1287,14 +1345,14 @@ implicit none
 ! ---- Specific humidity
     if (beta /= 0) then
         wqe = -we*dq(1)
-        dq(2)=dq(1)+ ((gammaq*we)-(1/(zi(1)+inf))*(wqs - wqe))*dtime   !eq. (3)
+        dq(2)=dq(1)+ ((gammaq*(we-wm))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
         if (.not. ladvecFT) dq(2) = dq(2) - lsq*dtime
     else
         wqe  = 0.
         dq(2)= 0.
     endif
 
-    qm(2)=qm(1)+((1/(zi(1)+inf))*(wqs - wqe))*dtime+lsq*dtime          !eq  (1)
+    qm(2)=qm(1)+((1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime+lsq*dtime          !eq  (1)
 ! -----------Carbon Dioxide
 
     if (beta /= 0) then
@@ -1544,17 +1602,17 @@ implicit none
     if ((mod(tt,aver1)) == 0) then
 !     if (tt == nint(60/dtime)) then
 !     tt=0
-      write (20,'(14F14.5)') thour,printhour,zi(2), &
+      write (20,'(17F14.5)') thour,printhour,zi(2), &
         we,thetam(2),dtheta(2),wthetae,wthetas,beta, &
-        um(2),du(2),vm(2),dv(2),ws
+        um(2),du(2),vm(2),dv(2),ws,ac,wm,dz
 
       write (50,'(2F14.4,13F14.4)') thour,printhour, &
         ustar,uws, vws, uwe, vwe, du(2), dv(2), &
         sqrt(du(2)**2+dv(2)**2)
 
-      write (60,'(2F14.4,5F14.4,6E15.5)') thour,printhour, zi(2) &
+      write (60,'(2F14.4,5F14.4,8E15.5)') thour,printhour, zi(2) &
         ,qm(2), dq(2), wqe, wqs, betaq &
-        ,cm(2), dc(2), wce, wcs, betac
+        ,cm(2), dc(2), wce, wcs, betac, q2*1000., wqm*1000.
 
       if(lchem)then
         write(formatstring,'(A,i2,A)') '(2E15.5E3,',nchsp ,'E15.5E3)'
