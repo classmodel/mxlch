@@ -1065,7 +1065,7 @@ implicit none
 
           ! CO2 soil respiration surface flux
           fw       = Cw * wsmax / (wg + wsmin)
-          Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (thetasurf)))
+          Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (thetasurf)))
 
           wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0/rho) !in ppm m/s
 
