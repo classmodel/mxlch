@@ -731,6 +731,21 @@ implicit none
             'UTC(hours)','RT(h-ours)','zi(m)','qm(g/kg)','dq(g/kg)','wqe', &
             'wqs','   betaq','  cm(ppm)','dc(ppm)', 'wce','wcs','  betac','q2','wqm'
 
+  if(llandsurface)then
+  open (61, file=trim(outdir)//dirsep//'output_land')
+    write (61,'(a4)') 'TIME'
+    write (61,'(I4)') time/atime
+    write (61,'(12a14)') 'UTC(hours)','RT(hours)','SWin(W/m2)','SWout(w/m2)', &
+            'Lwin(W/m2)','LWout(W/m2)','Qtot(W/m2)','SH(W/m2)','LE(W/m2)', &
+            'GR(W/m2)','ra(s/m)','rs(s/m)' 
+    if(lCO2Ags)then
+    open (63, file=trim(outdir)//dirsep//'output_ags')
+      write (63,'(a4)') 'TIME'
+      write (63,'(I4)') time/atime
+      write (63,'(12a14)') 'UTC(hours)','RT(hours)','An(mgC/m2s)','Resp(mgC/m2s)'
+    endif
+  endif
+
   if(lchem)then
     write(formatstring,'(A,i2,A)')'(',nchsp+2,'A15)'    !nchsp + 2 places for the 2 times
     open (40, file=trim(outdir)//dirsep//'chem_conc')
@@ -1065,7 +1080,8 @@ implicit none
 
           ! CO2 soil respiration surface flux
           fw       = Cw * wsmax / (wg + wsmin)
-          Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (thetasurf)))
+!          Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil
+          Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
 
           wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0/rho) !in ppm m/s
 
@@ -1614,6 +1630,14 @@ implicit none
         ,qm(2), dq(2), wqe, wqs, betaq &
         ,cm(2), dc(2), wce, wcs, betac, q2*1000., wqm*1000.
 
+      if(llandsurface)then
+        write (61,'(12F14.5)') thour,printhour,Swin, &
+          Swout,Lwin,Lwout,Qtot,SH,LE,GR,ra,rs
+        if(lCO2Ags)then
+          write (63,'(4F14.5)') thour,printhour,An, Resp
+        endif
+      endif
+
       if(lchem)then
         write(formatstring,'(A,i2,A)') '(2E15.5E3,',nchsp ,'E15.5E3)'
 
@@ -1698,13 +1722,13 @@ implicit none
   write(31,'(a26,I5,a1)') 'Time int. between profiles', atime_vert,'s'
   write(32,'(a26,I5,a1)') 'Time int. between profiles', atime_vert,'s'
 
-  if (n == 0) then
-    write(20,'(a28)') 'Saturation level NOT reached'
-    write(60,'(a28)') 'Saturation level NOT reached'
-  else
-    write(20,'(a28)') 'Saturation level reached'
-    write(60,'(a28)') 'Saturation level reached'
-  end if
+!  if (n == 0) then
+!    write(20,'(a28)') 'Saturation level NOT reached'
+!    write(60,'(a28)') 'Saturation level NOT reached'
+!  else
+!    write(20,'(a28)') 'Saturation level reached'
+!    write(60,'(a28)') 'Saturation level reached'
+!  end if
 
 ! print status
   close (20)
@@ -1721,7 +1745,9 @@ implicit none
   close (50)
   close (51)
   close (60)
+  close (61)
   close (62)
+  close (63)
 
 end program
 
