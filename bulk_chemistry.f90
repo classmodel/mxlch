@@ -1145,63 +1145,68 @@ implicit none
                 wcs = wcsmax * sin(pi * (sec - daytime_start)/daylength)
         end if
 
-        select case(function_wT)
-          case(0)
-            wthetas = 0.
-          case(1)
-            wthetas = wthetasmax
-          case(2)
-            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
-            else
-              wthetas = wthetasmax * sin(pi * (sec - starttime_wT)/(endtime_wT - starttime_wT)) 
-            end if
-          case(3)
-            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
-            else
-              wthetas = wthetasmax 
-            end if
-          case(4)
-            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
-            else
-              wthetas = (wthetasmax/2) * (1 - cos(2*pi*(sec - starttime_wT)/(endtime_wT - starttime_wT)))
-            end if
-          case default
-            if (t==1) print *,'Flag for the function of wT is invalid: ',function_wT
-            stop 'change function'
-        end select
-        wthetas = wthetas + offset_wT
+!TROFFEE prescribes heat fluxes:        select case(function_wT)
+!TROFFEE prescribes heat fluxes:          case(0)
+!TROFFEE prescribes heat fluxes:            wthetas = 0.
+!TROFFEE prescribes heat fluxes:          case(1)
+!TROFFEE prescribes heat fluxes:            wthetas = wthetasmax
+!TROFFEE prescribes heat fluxes:          case(2)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
+!TROFFEE prescribes heat fluxes:              wthetas = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wthetas = wthetasmax * sin(pi * (sec - starttime_wT)/(endtime_wT - starttime_wT)) 
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case(3)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
+!TROFFEE prescribes heat fluxes:              wthetas = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wthetas = wthetasmax 
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case(4)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
+!TROFFEE prescribes heat fluxes:              wthetas = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wthetas = (wthetasmax/2) * (1 - cos(2*pi*(sec - starttime_wT)/(endtime_wT - starttime_wT)))
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case default
+!TROFFEE prescribes heat fluxes:            if (t==1) print *,'Flag for the function of wT is invalid: ',function_wT
+!TROFFEE prescribes heat fluxes:            stop 'change function'
+!TROFFEE prescribes heat fluxes:        end select
+!TROFFEE prescribes heat fluxes:        wthetas = wthetas + offset_wT
+!TROFFEE prescribes heat fluxes:
+!TROFFEE prescribes heat fluxes:        select case(function_wq)
+!TROFFEE prescribes heat fluxes:          case(0)
+!TROFFEE prescribes heat fluxes:            wqs = 0.
+!TROFFEE prescribes heat fluxes:          case(1)
+!TROFFEE prescribes heat fluxes:            wqs = wqsmax
+!TROFFEE prescribes heat fluxes:          case(2)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
+!TROFFEE prescribes heat fluxes:              wqs = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wqs = wqsmax * sin(pi * (sec - starttime_wq)/(endtime_wq - starttime_wq)) 
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case(3)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
+!TROFFEE prescribes heat fluxes:              wqs = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wqs = wqsmax 
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case(4)
+!TROFFEE prescribes heat fluxes:            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
+!TROFFEE prescribes heat fluxes:              wqs = 0.
+!TROFFEE prescribes heat fluxes:            else
+!TROFFEE prescribes heat fluxes:              wqs = (wqsmax/2) * (1 - cos(2*pi*(sec - starttime_wq)/(endtime_wq - starttime_wq)))
+!TROFFEE prescribes heat fluxes:            end if
+!TROFFEE prescribes heat fluxes:          case default
+!TROFFEE prescribes heat fluxes:            if (t==1) print *,'Flag for the function of wq is invalid: ',function_wq
+!TROFFEE prescribes heat fluxes:            stop 'change function'
+!TROFFEE prescribes heat fluxes:        end select
+!TROFFEE prescribes heat fluxes:        wqs = wqs + offset_wq
+        wthetas = 0.0
+        if((sec .gt. 8100) .and. (sec .lt. 36900)) wthetas = 0.19 * sin(pi*(sec-8100)/28800)
 
-        select case(function_wq)
-          case(0)
-            wqs = 0.
-          case(1)
-            wqs = wqsmax
-          case(2)
-            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
-            else
-              wqs = wqsmax * sin(pi * (sec - starttime_wq)/(endtime_wq - starttime_wq)) 
-            end if
-          case(3)
-            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
-            else
-              wqs = wqsmax 
-            end if
-          case(4)
-            if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
-            else
-              wqs = (wqsmax/2) * (1 - cos(2*pi*(sec - starttime_wq)/(endtime_wq - starttime_wq)))
-            end if
-          case default
-            if (t==1) print *,'Flag for the function of wq is invalid: ',function_wq
-            stop 'change function'
-        end select
-        wqs = wqs + offset_wq
+        wqs     = 0.0
+        if((sec .gt. 3600) .and. (sec .lt. 41400)) wqs     = 0.13 * sin(pi*(sec-3600)/37800)
 
       endif !llandsurface
 
@@ -1232,7 +1237,9 @@ implicit none
               Q_cbl(i) = (Q_init(i)/2) * (1 - cos(2*pi*(sec - starttime_chem)/(endtime_chem - starttime_chem)))
             endif
           case (5)
-              Q_cbl(i) = - Q_init(i) * c_cbl(i) 
+              Q_cbl(i) = - Q_init(i) * c_cbl(i)
+          case(751)                                                              ! TROFFEE: function for isoprene emissions
+              Q_cbl(i) = Q_init(i) * exp(-0.5*(( ((sec+18000)-42705)/7999 )**2)) ! TROFFEE: function for isoprene emissions
           case default
             if (t==1) print *,'Emission function for species ', i, 'is undefined'
             Q_cbl(i) = 0.
