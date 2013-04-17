@@ -1714,6 +1714,12 @@ implicit none
     dc(1)=dc(2)
     cm(1)=cm(2)
 
+    gamma  = gamma  * (1 + wsls * dtime)
+    gammaq = gammaq * (1 + wsls * dtime)
+    gammac = gammac * (1 + wsls * dtime)
+    gammau = gammau * (1 + wsls * dtime)
+    gammav = gammav * (1 + wsls * dtime)
+
   enddo !t=1, runtime
 
   write(28,'(a26,I5,a1)') 'Time int. between profiles', atime_vert,'s'
