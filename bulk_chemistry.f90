@@ -100,7 +100,7 @@ implicit none
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
   double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03
-  logical :: lenhancedentrainment=.false.
+  logical :: lenhancedentrainment=.false., lfixedlapserates=.false.
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -284,6 +284,7 @@ implicit none
     advtheta, &
     ladvecFT, &
     lencroachment, &
+    lfixedlapserates, &
     lscu
 
   namelist/NAMSURFLAYER/ &
@@ -1714,11 +1715,13 @@ implicit none
     dc(1)=dc(2)
     cm(1)=cm(2)
 
-    gamma  = gamma  * (1 + wsls * dtime)
-    gammaq = gammaq * (1 + wsls * dtime)
-    gammac = gammac * (1 + wsls * dtime)
-    gammau = gammau * (1 + wsls * dtime)
-    gammav = gammav * (1 + wsls * dtime)
+    if(.not. lfixedlapserates) then
+      gamma  = gamma  * (1 + wsls * dtime)
+      gammaq = gammaq * (1 + wsls * dtime)
+      gammac = gammac * (1 + wsls * dtime)
+      gammau = gammau * (1 + wsls * dtime)
+      gammav = gammav * (1 + wsls * dtime)
+    endif
 
   enddo !t=1, runtime
 
