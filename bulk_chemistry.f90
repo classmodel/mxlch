@@ -255,6 +255,7 @@ implicit none
     beta, &
     lenhancedentrainment, &
     wsls, &
+    lfixedlapserates, &
     wthetasmax, &
     c_wth, &
     c_fluxes, &
@@ -284,7 +285,6 @@ implicit none
     advtheta, &
     ladvecFT, &
     lencroachment, &
-    lfixedlapserates, &
     lscu
 
   namelist/NAMSURFLAYER/ &
