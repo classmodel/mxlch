@@ -100,7 +100,7 @@ implicit none
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
   double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03
-  logical :: lenhancedentrainment=.false.
+  logical :: lenhancedentrainment=.false., lfixedlapserates=.false.
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -158,7 +158,7 @@ implicit none
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
-  double precision :: tau=200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
+  double precision :: tau=7200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
   double precision :: q2=0,ac=0,wm=0,wqm=0  
   double precision :: Ptop,Ttop,estop,etop,qstop,qqs
   double precision :: ev,tempd,templcl,zlcl,RHlcl
@@ -255,6 +255,7 @@ implicit none
     beta, &
     lenhancedentrainment, &
     wsls, &
+    lfixedlapserates, &
     wthetasmax, &
     c_wth, &
     c_fluxes, &
@@ -284,7 +285,9 @@ implicit none
     advtheta, &
     ladvecFT, &
     lencroachment, &
-    lscu
+    lscu, &
+    lrelaxdz, &
+    tau
 
   namelist/NAMSURFLAYER/ &
     lsurfacelayer,&
@@ -1321,8 +1324,12 @@ implicit none
       end do
 
       ! 4. relaxe dz if(lrelaxdz)
-      if(lrelaxdz .and. ac>0) then
-        dz    = dz + ((1./2000.) * ((zlcl - zi(1))-dz)) * dtime
+      if(ac>0 .or. ((zlcl - zi(1)) .lt. 300.0)) then
+       if(lrelaxdz) then
+        dz    = dz + ((zlcl - zi(1)) - dz) * dtime/tau
+       else
+        dz    = min(max(zlcl - zi(1),100.0),500.0)
+       end if
       end if
     end if
 
@@ -1720,6 +1727,14 @@ implicit none
 
     dc(1)=dc(2)
     cm(1)=cm(2)
+
+    if(.not. lfixedlapserates) then
+      gamma  = gamma  * (1 + wsls * dtime)
+      gammaq = gammaq * (1 + wsls * dtime)
+      gammac = gammac * (1 + wsls * dtime)
+      gammau = gammau * (1 + wsls * dtime)
+      gammav = gammav * (1 + wsls * dtime)
+    endif
 
   enddo !t=1, runtime
 
