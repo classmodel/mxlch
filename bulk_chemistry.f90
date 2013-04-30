@@ -158,7 +158,7 @@ implicit none
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
-  double precision :: tau=200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
+  double precision :: tau=7200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
   double precision :: q2=0,ac=0,wm=0,wqm=0  
   double precision :: Ptop,Ttop,estop,etop,qstop,qqs
   double precision :: ev,tempd,templcl,zlcl,RHlcl
@@ -284,7 +284,9 @@ implicit none
     advtheta, &
     ladvecFT, &
     lencroachment, &
-    lscu
+    lscu, &
+    lrelaxdz, &
+    tau
 
   namelist/NAMSURFLAYER/ &
     lsurfacelayer,&
@@ -1314,8 +1316,12 @@ implicit none
       end do
 
       ! 4. relaxe dz if(lrelaxdz)
-      if(lrelaxdz .and. ac>0) then
-        dz    = dz + ((1./2000.) * ((zlcl - zi(1))-dz)) * dtime
+      if(ac>0 .or. ((zlcl - zi(1)) .lt. 300.0)) then
+       if(lrelaxdz) then
+        dz    = dz + ((zlcl - zi(1)) - dz) * dtime/tau
+       else
+        dz    = min(max(zlcl - zi(1),100.0),500.0)
+       end if
       end if
     end if
 
