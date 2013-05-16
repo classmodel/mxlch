@@ -12,28 +12,28 @@ from scipy import linspace, polyval, polyfit, sqrt, stats
 #from meanbin import meanbin
 
 ######################    reading model data   ###############################
-mdyn 	= loadtxt('/home/ruud/MXLCHgit/outop3/output_dyn', skiprows=3, comments='S')
-msca 	= loadtxt('/home/ruud/MXLCHgit/outop3/output_sca', skiprows=3, comments='S')
-mchem	= loadtxt('/home/ruud/MXLCHgit/outop3/chem_conc', skiprows=3)
-mphoto  = loadtxt('/home/ruud/MXLCHgit/outop3/chem_photo', skiprows=3) 
-mkeff   = loadtxt('/home/ruud/MXLCHgit/outop3/keff_cbl', skiprows=1) 
-mftr    = loadtxt('/home/ruud/MXLCHgit/outop3/chem_ftr', skiprows=3) 
-msoa    = loadtxt('/home/ruud/MXLCHgit/outop3/soa_part', skiprows=3) 
-msoaft  = loadtxt('/home/ruud/MXLCHgit/outop3/soa_ftr', skiprows=3) 
-mPLOH   = loadtxt('/home/ruud/MXLCHgit/outop3/PL/OH', skiprows=3) 
+mdyn 	= loadtxt('/home/ruud/MXLCH_SOA/outop3/output_dyn', skiprows=3, comments='S')
+msca 	= loadtxt('/home/ruud/MXLCH_SOA/outop3/output_sca', skiprows=3, comments='S')
+mchem	= loadtxt('/home/ruud/MXLCH_SOA/outop3/chem_conc', skiprows=3)
+mphoto  = loadtxt('/home/ruud/MXLCH_SOA/outop3/chem_photo', skiprows=3) 
+mkeff   = loadtxt('/home/ruud/MXLCH_SOA/outop3/keff_cbl', skiprows=1) 
+mftr    = loadtxt('/home/ruud/MXLCH_SOA/outop3/chem_ftr', skiprows=3) 
+msoa    = loadtxt('/home/ruud/MXLCH_SOA/outop3/soa_part', skiprows=3) 
+msoaft  = loadtxt('/home/ruud/MXLCH_SOA/outop3/soa_ftr', skiprows=3) 
+mPLOH   = loadtxt('/home/ruud/MXLCH_SOA/outop3/PL/OH', skiprows=3) 
 
 ######################    reading measurement data   ###############################
-mNOx	= loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/ceh-nox-gradient_bukit-atur_20080625.na', skiprows=40) # 30, 45, 60, 75m
-mO3     = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/ceh-o3-gradient_bukit-atur_20080625.na',skiprows=34) # 30, 45, 60, 75m
-mmeteo  = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/man-sonic-2_bukit-atur_20080621_micromet.na', skiprows=42) # 45m
-mPTRMS  = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/lanc-ptr-ms_bukit-atur_20080622.na', skiprows=35) # 75m
-mAMS    = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/man-ams_bukit-atur_20080624_r3.na', skiprows=24) # 33m
-mP      = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/cam-diracfmw_bukit-atur_20080616.na', skiprows=33)
-mFAGE   = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/leeds-fage_bukit-atur_20080706_version3.na', skiprows=37) # 5m
-mPMF    = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/OP3PMFfacs.txt', skiprows=1)
-mO3_5   = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/york-o3_bukit-atur_20080624.na', skiprows=24) # 5m
-mNOx_5  = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/york-noxy_bukit-atur_20080624.na', skiprows=41) # 5m
-mBVOC   = loadtxt('/home/ruud/MXLCHgit/cases/OP3/data/BVOC_MIXING RATIOS_OP3_3_LANCASTER.txt', skiprows=1) # 5m
+mNOx	= loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/ceh-nox-gradient_bukit-atur_20080625.na', skiprows=40) # 30, 45, 60, 75m
+mO3     = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/ceh-o3-gradient_bukit-atur_20080625.na',skiprows=34) # 30, 45, 60, 75m
+mmeteo  = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/man-sonic-2_bukit-atur_20080621_micromet.na', skiprows=42) # 45m
+mPTRMS  = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/lanc-ptr-ms_bukit-atur_20080622.na', skiprows=35) # 75m
+mAMS    = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/man-ams_bukit-atur_20080624_r3.na', skiprows=24) # 33m
+mP      = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/cam-diracfmw_bukit-atur_20080616.na', skiprows=33)
+mFAGE   = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/leeds-fage_bukit-atur_20080706_version3.na', skiprows=37) # 5m
+mPMF    = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/OP3PMFfacs.txt', skiprows=1)
+mO3_5   = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/york-o3_bukit-atur_20080624.na', skiprows=24) # 5m
+mNOx_5  = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/york-noxy_bukit-atur_20080624.na', skiprows=41) # 5m
+mBVOC   = loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/BVOC_MIXING RATIOS_OP3_3_LANCASTER.txt', skiprows=1) # 5m
 
 ### LEAP YEAR!!! convert to Day Of Year and Local Time ###
 at_AMS  = mAMS[:,0] + (8./24.) # UTC to UTC+8 (LT)

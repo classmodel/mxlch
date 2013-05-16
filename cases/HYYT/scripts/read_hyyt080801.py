@@ -9,17 +9,17 @@ from matplotlib.mathtext import *
 import pickle 
 
 ######################    reading    ###############################
-mdyn 	= loadtxt('/home/ruud/MXLCHgit/outhyyt/output_dyn', skiprows=3, comments='S')
-msca 	= loadtxt('/home/ruud/MXLCHgit/outhyyt/output_sca', skiprows=3, comments='S')
-mchem	= loadtxt('/home/ruud/MXLCHgit/outhyyt/chem_conc', skiprows=3)
-mphoto  = loadtxt('/home/ruud/MXLCHgit/outhyyt/chem_photo', skiprows=3) 
-mkeff   = loadtxt('/home/ruud/MXLCHgit/outhyyt/keff_cbl', skiprows=1) 
-mftr    = loadtxt('/home/ruud/MXLCHgit/outhyyt/chem_ftr', skiprows=3) 
-msoa    = loadtxt('/home/ruud/MXLCHgit/outhyyt/soa_part', skiprows=3) 
+mdyn 	= loadtxt('/home/ruud/MXLCH_SOA/outhyyt/output_dyn', skiprows=3, comments='S')
+msca 	= loadtxt('/home/ruud/MXLCH_SOA/outhyyt/output_sca', skiprows=3, comments='S')
+mchem	= loadtxt('/home/ruud/MXLCH_SOA/outhyyt/chem_conc', skiprows=3)
+mphoto  = loadtxt('/home/ruud/MXLCH_SOA/outhyyt/chem_photo', skiprows=3) 
+mkeff   = loadtxt('/home/ruud/MXLCH_SOA/outhyyt/keff_cbl', skiprows=1) 
+mftr    = loadtxt('/home/ruud/MXLCH_SOA/outhyyt/chem_ftr', skiprows=3) 
+msoa    = loadtxt('/home/ruud/MXLCH_SOA/outhyyt/soa_part', skiprows=3) 
 
-mhyyt 	   = loadtxt('/home/ruud/MXLCHgit/cases/HYYT/data/hyyt_meteo_08082001.txt', skiprows=1)
-mhyyt_ams  = loadtxt('/home/ruud/MXLCHgit/cases/HYYT/data/Hyytiala2005_QAMS.txt', skiprows=1)
-mhyyt_amsb = loadtxt('/home/ruud/MXLCHgit/cases/HYYT/data/Hyytiala2005_QAMS_binned.txt', skiprows=1)
+mhyyt 	   = loadtxt('/home/ruud/MXLCH_SOA/cases/HYYT/data/hyyt_meteo_08082001.txt', skiprows=1)
+mhyyt_ams  = loadtxt('/home/ruud/MXLCH_SOA/cases/HYYT/data/Hyytiala2005_QAMS.txt', skiprows=1)
+mhyyt_amsb = loadtxt('/home/ruud/MXLCH_SOA/cases/HYYT/data/Hyytiala2005_QAMS_binned.txt', skiprows=1)
 
 # model 
 at      = mdyn[:,0]+2 # convert UTC to LT
