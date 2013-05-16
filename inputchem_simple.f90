@@ -709,12 +709,12 @@ implicit none
   CiI%name    = 'CiI'
   
   !set all 0 elements to 1. incase we do calculations with unknown componets
-  c_cbl(0)=1.
-  c_ft(0)=1.
-  beta_ft(0)=1.
-  Q_cbl(0)=1.
-  E(0)=1.
-  c_current(0)=1
+  c_cbl(0)=0.
+  c_ft(0)=0.
+  beta_ft(0)=0.
+  Q_cbl(0)=0.
+  E(0)=0.
+  c_current(0)=0
   adv_chem_cbl(0)=0.0
   adv_chem_ft(0)=0.0
 
