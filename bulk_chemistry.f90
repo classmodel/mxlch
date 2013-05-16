@@ -92,15 +92,14 @@ implicit none
 ! declaration
 !   dynamics
 
-  logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., c_jno2, lencroachment=.false., ladvecFT=.false. !c_fluxes replaces c_wth
+  logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., lencroachment=.false., ladvecFT=.false., lgamma=.false., lenhancedentrainment=.false., lfixedlapserates=.false. !c_fluxes replaces c_wth
   logical :: lradiation=.false.,lsurfacelayer=.false.,llandsurface=.false.,lrsAgs=.false., lCO2Ags=.false.
   double precision :: zi(2),zi0 = 200 ,thetam(2), dtheta(2),pressure = 1013.0, wthetae
   double precision temp_cbl, temp_ft
   integer :: runtime,t, time=24*3600.0,tt
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
-  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03
-  logical :: lenhancedentrainment=.false., lfixedlapserates=.false.
+  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit, gamma2
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -115,6 +114,7 @@ implicit none
   integer :: day = 80
   real :: hour = 0
   integer ierr,iter
+  double precision pi
 
   double precision :: wthetasmax = 0.0 , wqsmax = 0.0 , wcsmax = 0.0
 
@@ -155,6 +155,7 @@ implicit none
   double precision :: factorial
   double precision :: Cw = 1.6e-3,wsmax=0.55,wsmin=0.005,R10=0.23,Eact0=53.3e3
   double precision :: betac,wcs,gammac = 0.0,cm0 = 0.0,dc0 = 0.0
+ 
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
@@ -164,10 +165,36 @@ implicit none
   double precision :: ev,tempd,templcl,zlcl,RHlcl
   integer          :: ii
 
-  double precision pi
+ ! define variables for G/P-partitioning
+  logical          :: lvbs=.false. 
+  integer m, low_high_NOx
+  double precision :: alpha1_TERP_low, alpha2_TERP_low, alpha3_TERP_low, alpha4_TERP_low, alpha1_TERP_high, alpha2_TERP_high, alpha3_TERP_high, alpha4_TERP_high 
+  double precision :: alpha1_ISO_low, alpha2_ISO_low, alpha3_ISO_low, alpha1_ISO_high, alpha2_ISO_high, alpha3_ISO_high
+  double precision :: CiTmc, CiImc, beta_iso, beta_terp
+  double precision :: epsi, C1Tmc, C2Tmc, C3Tmc, C4Tmc, C1_st, C2_st, C3_st, C4_st, X1, X2, X3, X4, T_hh, Coait, Coait_new, Coa, OAbgb
+  double precision :: C1Tlmc,C2Tlmc,C3Tlmc,C4Tlmc,C1Thmc,C2Thmc,C3Thmc,C4Thmc, C1Ilmc,C2Ilmc,C3Ilmc,C1Ihmc,C2Ihmc,C3Ihmc
+  double precision :: C1Tlmc_ft,C2Tlmc_ft,C3Tlmc_ft,C4Tlmc_ft,C1Thmc_ft,C2Thmc_ft,C3Thmc_ft,C4Thmc_ft, C1Ilmc_ft,C2Ilmc_ft,C3Ilmc_ft,C1Ihmc_ft,C2Ihmc_ft,C3Ihmc_ft
+  double precision :: C1mc, C2mc, C3mc, C4mc, C1mc_ft, C2mc_ft, C3mc_ft, C4mc_ft
+  double precision :: CiTmc_ft, CiImc_ft
+  double precision :: C1Imc, C2Imc, C3Imc, C1Imc_ft, C2Imc_ft, C3Imc_ft 
+  double precision :: epsi_ft, C1Tmc_ft, C2Tmc_ft, C3Tmc_ft, C4Tmc_ft, C1_st_ft, C2_st_ft, C3_st_ft, C4_st_ft, X1_ft, X2_ft, X3_ft, X4_ft, T_ft, OAbgb_ft, Coait_ft, Coait_new_ft, Coa_ft
+  double precision :: mr2mc_OAbg, mr2mc_PRODT, mr2mc_PRODI, C10_st=1., C20_st=10., C30_st=100., C40_st=1000.
+  double precision :: kISORO2NO, kISORO2HO2, kTERPRO2NO, kTERPRO2HO2
+  real, parameter :: T0      = 298.    ! temperature (K) at which the lab experiments and fitting are done, Tsimpidi'10
+  real, parameter :: dHvap   = 30.e3   ! enthalpy of vaporization (J/mol), Lane'08
+  real, parameter :: PRODTmm  = 180.   ! molar mass terp-oxidation products (g/mol)
+  real, parameter :: PRODImm  = 136.   ! molar mass iso-oxidation products (g/mol)
+  real, parameter :: mmOAbg = 250.     ! molar mass background OA (g/mol)
+  real conv_cbl,conv_ft, Rfact
 
+  ! define variables for bVOC-emission
+  logical          :: lBVOC =.false.
+  double precision :: BaserateISO = 0.0, BaserateTER = 0.0
+  double precision :: dwg = 0.06, gammaLAI, w1, gammasm
+  double precision :: beta_MT, Tref, gammaT_MT, gammace_MT, gamma_MT, eps_MT, rho_MT, ER_MT, mm_MT, cf_MT, F_TERP 
+  double precision :: Thr, Tdaily, Topt, C_T1, C_T2, x, Eopt, gammaT_ISO, aa, Pac, Pdaily, Ptoa, phi, gammap, gammace_ISO, gamma_ISO, eps_ISO, rho_ISO, ER_ISO, mm_ISO, cf_ISO, F_ISO
+  
   !Define variables for the 'saturation level' program
-
   integer :: i,a,n,aver3,sat_lev
   double precision p0,epsilon,Tabs,Cp,Rd,Rv,Lv,e0,gammad,gammam
   double precision np,p,lcl,lcl0
@@ -189,6 +216,7 @@ implicit none
   real,parameter :: bolz =  5.67e-8 !Stefan-Boltzmann constant [-]
   real,parameter :: rhow =  1000.   !density of water [kg m-3]
   real,parameter :: rho  =    1.2   !density of air [kg m-3]
+  real,parameter :: Rgas = 8.3145   ! gas constant (J mol-1 k-1)  
   real           :: S0   =  1368.   !Incoming shortwave radiation [W m-2]
 
   !chemistry
@@ -260,6 +288,9 @@ implicit none
     c_wth, &
     c_fluxes, &
     gamma, &
+    lgamma, &
+    hcrit,&
+    gamma2,&
     thetam0, &
     dtheta0, &
     pressure, &
@@ -345,7 +376,10 @@ implicit none
     wsmax   ,&     !upper reference value soil water [-]
     wsmin   ,&     !lower reference value soil water [-]
     R10     ,&     !respiration at 10 C [mg CO2 m-2 s-1]
-    Eact0          !activation energy [53.3 kJ kmol-1]
+    Eact0   ,&     !activation energy [53.3 kJ kmol-1]
+    lBVOC   ,&     !Enable the calculation of BVOC (isoprene, terpene) emissions
+    BaserateIso ,& !Base emission rate for isoprene emissions [microg m^4 h^-1]
+    BaserateTer    !Base emission rate for terprene emissions [microg m^4 h^-1]
 
   ! option for the chemistry
   namelist/NAMCHEM/ &
@@ -381,6 +415,25 @@ implicit none
     function_wT   , &
     function_wq   
 
+  ! options for the gas/particle partitioning leading to SOA formation, using the Volatility Basis Set (VBS)
+  namelist/NAMSOA/ &
+    lvbs          , &
+    low_high_NOx  , &
+    alpha1_TERP_low , &
+    alpha2_TERP_low , &
+    alpha3_TERP_low , &
+    alpha4_TERP_low , &
+    alpha1_TERP_high , &
+    alpha2_TERP_high , &
+    alpha3_TERP_high , &
+    alpha4_TERP_high , &
+    alpha1_ISO_low , &
+    alpha2_ISO_low , &
+    alpha3_ISO_low , & 
+    alpha1_ISO_high , &
+    alpha2_ISO_high , &
+    alpha3_ISO_high
+
   if (windows) then
     dirsep = '\'
     kopie = 'copy '
@@ -396,6 +449,8 @@ implicit none
   aver3 = 300             ! saturation level will be calculated every 300s
 
   pi=acos(-1.)
+
+  Rfact= 8.314e-2 ! mbar*m3 /K*mol
 
   lcl = 3000.    !dummy value for first run
   a = 0
@@ -488,6 +543,10 @@ implicit none
   read (1,NAMSURFLAYER,iostat=ierr)
   if (ierr > 0) stop 'ERROR: Problem in namoptions'
   close(1)
+  open (1, file='namoptions')
+  read (1,NAMSOA,iostat=ierr)
+  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  close(1)
 
   if ( lCO2Ags ) then
     lrsAgs       = .true.
@@ -576,7 +635,7 @@ implicit none
   enddo
   daylength = enddaytime - startdaytime
 
-  write (*,*)'LCHEM=',lchem,'LDIUVAR=',ldiuvar,'LCONST=',lchconst,'LFLUX=',lflux
+  write (*,*)'LCHEM=',lchem,'LDIUVAR=',ldiuvar,'LCONST=',lchconst,'LFLUX=',lflux,'LVBS=',lvbs, 'LBVOC=', lBVOC
   write (*,*) ' long',long
   write (*,*) 'latt',latt
   write (*,*) ' day',day
@@ -765,6 +824,27 @@ implicit none
        write (42, '(a4)') 'CHEM'
        write (42,'(I4)') time/atime
        write (42,formatstring) 'UTC(hours)','RT(hours)',(PL_scheme(k)%name,k=1,nchsp)
+
+    if(lvbs)then
+      open (43, file=trim(outdir)//dirsep//'soa_part')
+       write (43, '(a4)') 'SOA'
+       write (43,'(I4)') time/atime
+       write (43,formatstring) 'UTC(hours)','RT(hours)','OAbgb','Coa','C1Tmc','C2Tmc','C3Tmc','C4Tmc','C1Imc','C2Imc','C3Imc','X1','X2','X3','X4', &
+         'mr2mc_PRODT','mr2mc_PRODI', 'beta_terp', 'beta_iso'
+
+      open (44, file=trim(outdir)//dirsep//'soa_ftr')
+       write (44, '(a4)') 'SOA'
+       write (44,'(I4)') time/atime
+       write (44,formatstring) 'UTC(hours)','RT(hours)','OAbgb','Coa','C1Tmc','C2Tmc','C3Tmc','C4Tmc','C1Imc','C2Imc','C3Imc','X1','X2','X3','X4'
+    endif
+    
+    if(lBVOC)then
+      open (45, file=trim(outdir)//dirsep//'voc_em')
+         write (45, '(a4)') 'VOC'
+         write (45,'(I4)') time/atime
+         write (45,formatstring) 'UTC(hours)','RT(hours)','F_ISO', 'F_TERP','gamma_ISO', 'gammaT_ISO', 'gammap', 'gammace_ISO', &
+         'gamma_MT', 'gammaT_MT', 'gammace_MT', 'gammaLAI', 'gammasm' 
+    endif
 
     open (46, file=trim(outdir)//dirsep//'initial_chem')
        write (46,*) '# name initial_c_CBL c_ft0    emission function'
@@ -1057,7 +1137,6 @@ implicit none
           Rdark    = (1.0/9) * Am
 
           PAR      = 0.40*max(0.1,Swin*cveg)
-
           ! calculate  light use efficiency
           alphac   = alpha0 * (co2abs - CO2comp) / (co2abs + 2 * CO2comp)
 
@@ -1132,13 +1211,83 @@ implicit none
         C1     = C1sat * (wsat / wg) ** (CLb / 2.0 + 1.0)
         C2     = C2ref * (w2 / (wsat - w2) )
         wgeq   = w2 - wsat * CLa * ( (w2 / wsat) ** CLc * (1.0 - (w2 / wsat) ** (8.0 * CLc)) )
-
         wgtend = - C1 / (rhow * 0.1) * LEsoil / Lv - C2 / 86400 * (wg - wgeq)
         wg     = wg + wgtend * dtime
 
         wthetas= SH / (rho * Cp)
         wqs    = LE / (rho * Lv * 1.0e-3)
         wcs    = wcsmax
+
+        if (lBVOC) then  ! BVOC emissions
+          if (llandsurface .eqv. .false. .or. lrsAgs .eqv. .false.) then
+            print *,""
+            print *,""
+            print *,"!!!!!!!!!!!!!!!!!!!!!"
+            print *,""
+            print *,"You enabled interactive VOC emissions without enabling"
+            print *,"the land surface scheme (llandsurface) and/or A-gs (lrsAgs)"
+            print *,"VOC emissions can not be calculated due to missing input variables!"
+            print *,""
+            print *,"!!!!!!!!!!!!!!!!!!!!!"
+            print *,""
+            print *,""
+            stop 'switch land surface & A-gs on'
+          endif
+
+           ! MT-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm, and Sakulnayontvittaya'08      
+           gammaLAI   = 0.49*LAI/((1.+0.2*LAI**2.)**0.5)
+           
+           w1         = wwilt + dwg  ! (eq. 20 Guenther06)
+           if (wg .gt. w1) then  
+           gammasm    = 1.  
+           elseif (wg .lt. wwilt) then
+           gammasm    = 0.
+           else
+           gammasm    = (wg-wwilt)/dwg
+           endif
+
+           beta_MT    = 0.13 ! (K-1) (Sakulnayontvittaya08)
+           Tref       = 303  ! reference temperature for bVOC BaseEmissionRate (K) 
+           gammaT_MT  = exp(beta_MT*(Ts-Tref))
+
+           gammace_MT = gammaLAI * gammaT_MT ! emission activity factor canopy environment (-) (eq.10, Guenther96)
+           gamma_MT   = gammace_MT * gammasm ! emission activity factor terpene (-) (eq.2, Guenther96) (no light and leaf age dependence)
+             
+           eps_MT     = BaserateTer ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
+           rho_MT     = 1. ! factor that accounts for chemical production and loss within plant canopies (-)
+           ER_MT      = eps_MT * gamma_MT * rho_MT ! monoterpene emission rate (μg m-2 h-1)
+            
+           mm_MT      = 10.*12.01 + 16.*1.008    ! molecular mass C10H16
+           cf_MT      = mm_MT*((pressure*100.)/(Rgas*Ts)*3600*1e-3) ! flux conversion factor ppb m s-1 -> ug m-2 h-1
+           F_TERP     = ER_MT / cf_MT             ! isoprene emission rate (ppb m s-1)
+
+           !ISO-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm         
+           Thr        = Ts ! should be hourly average temperature (K)
+           Tdaily     = 295. ! daily average temperature (K)
+           Topt       = 313 + (0.6*(Tdaily-297)) ! (adapted from eq. 8 Guenther06)
+           C_T1       = 80.  ! empirical coefficient
+           C_T2       = 200. ! empirical coefficient
+           x          = ((1/Topt)-(1/Thr))/0.00831
+           Eopt       = 1.75*exp(0.08*(Tdaily-297)) 
+           gammaT_ISO = Eopt * C_T2 * exp(C_T1*x)/(C_T2-C_T1*(1-exp(C_T2*x)))
+
+           aa         = zenith + 90. ! solar angle relative to surface = zenith angle + 90 (deg.)
+           Pac        = PAR ! above canopy PPFD (umol m-2 s-1)
+           Pdaily     = PAR !?! daily average above canopy PPFD (umol m-2 s-1)
+           Ptoa       = 3000. + 99*cos((2*pi*((day-10.)/365.))*pi/180.0) ! 
+           phi        = Pac/(sin(aa*(pi/180.0))*Ptoa)! above canopy PPFD transmission (-) ! 
+           gammap     = sin(aa*(pi/180.0))*(2.46*(1.+0.0005*(Pdaily-400.))*phi*0.9*phi**2.) ! 
+
+           gammace_ISO= gammaLAI * gammaT_ISO * gammap
+           gamma_ISO  = gammace_ISO * gammasm
+               
+           eps_ISO    = BaserateIso  ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
+           rho_ISO    = 0.96     
+           ER_ISO     = eps_ISO * gamma_ISO * rho_ISO ! isoprene emission rate (μg m-2 h-1)
+           mm_ISO     = 5.*12.01 + 8.*1.008      ! molecular mass C5H8
+           cf_ISO     = mm_ISO*((pressure*100.)/(Rgas*Ts)*3600*1e-3)! flux conversion factor ppb m s-1 -> ug m-2 h-1
+           F_ISO      = ER_ISO / cf_ISO           ! monoterpene emission rate (ppb m s-1)
+        endif ! bVOC
 
       else !llandsurface
 
@@ -1235,7 +1384,7 @@ implicit none
               Q_cbl(i) = (Q_init(i)/2) * (1 - cos(2*pi*(sec - starttime_chem)/(endtime_chem - starttime_chem)))
             endif
           case (5)
-              Q_cbl(i) = - Q_init(i) * c_cbl(i) 
+              Q_cbl(i) = - Q_init(i) * c_cbl(i)             
           case default
             if (t==1) print *,'Emission function for species ', i, 'is undefined'
             Q_cbl(i) = 0.
@@ -1251,6 +1400,14 @@ implicit none
       endif
       !HGO if lCO2Ags, then calculate wCO2 @ CO2%loc apart lchem and CO2%loc
       !.gt. 0
+      if (lBVOC) then
+        if(lchem .and. (TERP%loc .gt. 0) ) then
+          Q_cbl(TERP%loc) = F_TERP
+        endif
+        if(lchem .and. (ISO%loc .gt. 0) ) then
+          Q_cbl(ISO%loc) = F_ISO
+        endif
+      endif
     endif !(c_wth)
 
     if (wthetav .lt. 0.0) wthetav = 0.0
@@ -1264,7 +1421,7 @@ implicit none
 !   subsidence velocity (large-scale advection)
     ws=-wsls*zi(1)
 !
-!   inroducing advection mpositure
+!   introducing advection moisture
     lsq     = 0.0
     lstheta = 0.0
     if ((sec .ge. starttime_adv) .and. (sec .lt. endtime_adv)) then
@@ -1329,6 +1486,13 @@ implicit none
 !   dynamics eulerien time-step
 !   Potential temperature
 
+!   switch for applying different lapse rate
+    if (lgamma .eqv. .true.) then
+       if (zi(2)>hcrit) then
+         gamma = gamma2
+       endif
+    endif      
+    
     if (lencroachment .eqv. .false.) then
             
 !   jump depending on the virtual temperature jump
@@ -1575,7 +1739,7 @@ implicit none
           beta_ft(k)=E(k)/Q_cbl(k)
         endif
       enddo
-
+       
       if(lchconst .eqv. .true.)then
         temp_cbl = t_ref_cbl
         temp_ft  = t_ref_ft
@@ -1619,6 +1783,152 @@ implicit none
           photo = (RC(R_NO%loc)%Keff_cbl * c_cbl(NO%loc)*c_cbl(O3%loc))/(RC(R_NO2%loc)%Keff_cbl*c_cbl(NO2%loc))
       endif
     endif !(lchem)
+    
+    ! Gas/Particle-partitioning using the Volatility Basis Set (Donahue'06, ES&T) with 4 bins
+    if(lvbs) then
+        ! G/P-partitioning BL 
+        T_hh    = thetam(2)+gammad*(zi(2)/2.)         ! T at h/2; dry adiabatic lapse rate T = (theta-g/Cp)*z
+        T_ft = (thetam(2)+dtheta(2))+gammad*zi(2)  ! temperature at the inversion: <theta> + dtheta
+    
+        mr2mc_PRODT = ((pressure*100.)*PRODTmm)/(Rgas*T_hh) * 1e-3 ! factor to convert TERP products (SVOCs) from ppb to ug/m3
+        mr2mc_PRODI = ((pressure*100.)*PRODImm)/(Rgas*T_hh) * 1e-3 ! factor to convert ISO products (SVOCs) from ppb to ug/m3
+        mr2mc_OAbg  = ((pressure*100.)*mmOAbg)/(Rgas*T_hh) * 1e-3  ! factor to convert OAbg from ppb to ug/m3 
+        !print *, mr2mc_OAbg
+        OAbgb = c_cbl(OAbg%loc)!* mr2mc_OAbg  ! convert mixing ratio (ppb) to mass concentration (ug m-3)
+        CiTmc = c_cbl(CiT%loc) * mr2mc_PRODT 
+        CiImc = c_cbl(CiI%loc) * mr2mc_PRODI  
+        C1Tlmc  = alpha1_TERP_low  * CiTmc ! low NOx channel product yield per bin from TERP (Tsimpidi'10, ACP)
+        C2Tlmc  = alpha2_TERP_low  * CiTmc
+        C3Tlmc  = alpha3_TERP_low  * CiTmc
+        C4Tlmc  = alpha4_TERP_low  * CiTmc
+        C1Thmc  = alpha1_TERP_high * CiTmc ! high NOx channel product yield per bin from TERP (Tsimpidi'10, ACP)
+        C2Thmc  = alpha2_TERP_high * CiTmc
+        C3Thmc  = alpha3_TERP_high * CiTmc
+        C4Thmc  = alpha4_TERP_high * CiTmc
+
+        C1Ilmc  = alpha1_ISO_low  * CiImc ! low NOx channel product yield per bin from ISO (Tsimpidi'10, ACP)
+        C2Ilmc  = alpha2_ISO_low  * CiImc
+        C3Ilmc  = alpha3_ISO_low  * CiImc
+        C1Ihmc  = alpha1_ISO_high * CiImc ! high NOx channel product yield per bin from ISO (Tsimpidi'10, ACP)
+        C2Ihmc  = alpha2_ISO_high * CiImc
+        C3Ihmc  = alpha3_ISO_high * CiImc
+
+        kISORO2NO  = RC(R_ISORO2NO%loc)%Keff_cbl / convcbl  ! convert from cm3/molec*s to ppb/s
+        kISORO2HO2 = RC(R_ISORO2HO2%loc)%Keff_cbl / convcbl ! convert from cm3/molec*s to ppb/s
+        kTERPRO2NO = 8.7e-12 ! reaction rate for NO + C2H5O2 at 298K
+        kTERPRO2HO2= 8.0e-12 ! reaction rate for HO2 + C2H5O2 at 298K
+
+        select case(low_high_NOx)    ! low/high NOx branching of SVOC yields (Lane'08, ES&T)
+          case(0) ! calculate branching ratio beta = rate_of_RO2+NO/(rate_of_RO2+NO + rate_of_RO2+HO2)
+            beta_iso    = (kISORO2NO*c_cbl(NO%loc)) / (kISORO2NO*c_cbl(NO%loc) + kISORO2HO2*c_cbl(HO2%loc))
+            beta_terp   = (kTERPRO2NO*c_cbl(NO%loc)) / (kTERPRO2NO*c_cbl(NO%loc) + kTERPRO2HO2*c_cbl(HO2%loc))
+          case(1) ! only low NOx channel yields
+            beta_terp = 0. 
+            beta_iso  = 0.
+          case(2) ! only high NOx channel yields
+            beta_terp = 1. 
+            beta_iso  = 1.
+          case default
+            if (t==1) print *,'Flag for the function of high/low NOx branching is invalid: ',low_high_NOx
+            stop 'change function'
+        end select
+
+        C1Tmc   = (1-beta_terp)*C1Tlmc + beta_terp*C1Thmc
+        C2Tmc   = (1-beta_terp)*C2Tlmc + beta_terp*C2Thmc
+        C3Tmc   = (1-beta_terp)*C3Tlmc + beta_terp*C3Thmc
+        C4Tmc   = (1-beta_terp)*C4Tlmc + beta_terp*C4Thmc
+
+        C1Imc   = (1-beta_iso)*C1Ilmc + beta_iso*C1Ihmc
+        C2Imc   = (1-beta_iso)*C2Ilmc + beta_iso*C2Ihmc
+        C3Imc   = (1-beta_iso)*C3Ilmc + beta_iso*C3Ihmc
+
+        C1mc    = C1Tmc + C1Imc 
+        C2mc    = C2Tmc + C2Imc
+        C3mc    = C3Tmc + C3Imc
+        C4mc    = C4Tmc 
+ 
+        ! T-dependence following Clausius-Clapeyron (Sheehan and Bowman '01)
+        C1_st    = C10_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh)) 
+        C2_st    = C20_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
+        C3_st    = C30_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
+        C4_st    = C40_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
+        m        = 0 
+        Coait    = OAbgb  
+        epsi = 1.
+        do while (epsi>1e-10) ! set iteration tolerance here
+             X1          = 1./((1.+(C1_st/Coait)))                                                                                         
+             X2          = 1./((1.+(C2_st/Coait)))
+             X3          = 1./((1.+(C3_st/Coait)))
+             X4          = 1./((1.+(C4_st/Coait)))
+             Coait_new   = X1*C1mc + X2*C2mc + X3*C3mc + X4*C4mc + OAbgb                  
+             epsi         = abs(Coait-Coait_new) ! optimization parameter
+             Coait       = Coait_new      
+             m           = m+1  
+             if (m>100) then
+                write (*,*) 'Warning: no convergence (BL)!'  
+             endif                   
+        enddo ! while  
+        Coa = Coait
+        ! G/P-partitioning FT
+        OAbgb_ft = c_ft(OAbg%loc)!* mr2mc_OAbg  ! convert to ug m-3
+        CiTmc_ft  = c_ft(CiT%loc)* mr2mc_PRODT ! ug/m3
+        CiImc_ft  = c_ft(CiI%loc) * mr2mc_PRODI ! ug/m3
+
+        C1Tlmc_ft  = alpha1_TERP_low * CiTmc_ft
+        C2Tlmc_ft  = alpha2_TERP_low * CiTmc_ft
+        C3Tlmc_ft  = alpha3_TERP_low * CiTmc_ft
+        C4Tlmc_ft  = alpha4_TERP_low * CiTmc_ft
+        C1Thmc_ft  = alpha1_TERP_high * CiTmc_ft
+        C2Thmc_ft  = alpha2_TERP_high * CiTmc_ft
+        C3Thmc_ft  = alpha3_TERP_high * CiTmc_ft
+        C4Thmc_ft  = alpha4_TERP_high * CiTmc_ft
+
+        C1Ilmc_ft  = alpha1_ISO_low * CiImc_ft
+        C2Ilmc_ft  = alpha2_ISO_low * CiImc_ft
+        C3Ilmc_ft  = alpha3_ISO_low * CiImc_ft
+        C1Ihmc_ft  = alpha1_ISO_high * CiImc_ft
+        C2Ihmc_ft  = alpha2_ISO_high * CiImc_ft
+        C3Ihmc_ft  = alpha3_ISO_high * CiImc_ft
+
+        C1Tmc_ft   = (1-beta_terp)*C1Tlmc_ft + beta_terp*C1Thmc_ft
+        C2Tmc_ft   = (1-beta_terp)*C2Tlmc_ft + beta_terp*C2Thmc_ft
+        C3Tmc_ft   = (1-beta_terp)*C3Tlmc_ft + beta_terp*C3Thmc_ft
+        C4Tmc_ft   = (1-beta_terp)*C4Tlmc_ft + beta_terp*C4Thmc_ft
+
+        C1Imc_ft   = (1-beta_iso)*C1Ilmc_ft + beta_iso*C1Ihmc_ft
+        C2Imc_ft   = (1-beta_iso)*C2Ilmc_ft + beta_iso*C2Ihmc_ft
+        C3Imc_ft   = (1-beta_iso)*C3Ilmc_ft + beta_iso*C3Ihmc_ft
+    
+        C1mc_ft  = C1Tmc_ft + C1Imc_ft
+        C2mc_ft  = C2Tmc_ft + C2Imc_ft
+        C3mc_ft  = C3Tmc_ft + C3Imc_ft
+        C4mc_ft  = C4Tmc_ft
+     
+        ! T-dependence following Clausius-Clapeyron (Sheehan and Bowman '01)
+        C1_st_ft    = C10_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft)) 
+        C2_st_ft    = C20_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
+        C3_st_ft    = C30_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
+        C4_st_ft    = C40_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
+        m        = 0 
+        Coait_ft = OAbgb_ft  
+        epsi_ft = 1.
+        do while (epsi>1e-10) ! set iteration tolerance here
+             X1_ft          = 1./((1.+(C1_st_ft/Coait_ft)))
+             X2_ft          = 1./((1.+(C2_st_ft/Coait_ft)))
+             X3_ft          = 1./((1.+(C3_st_ft/Coait_ft)))
+             X4_ft          = 1./((1.+(C4_st_ft/Coait_ft)))
+             Coait_new_ft   = X1_ft*C1mc_ft + X2_ft*C2mc_ft + X3_ft*C3mc_ft + X4_ft*C4mc_ft + OAbgb_ft                  
+             epsi_ft         = abs(Coait_ft-Coait_new_ft) ! optimization parameter
+             Coait_ft       = Coait_new_ft      
+             m           = m+1  
+             if (m>100) then
+                write (*,*) 'Warning: no convergence (FT)!'  
+             endif                   
+        enddo ! while  
+        Coa_ft = Coait_ft
+    end if ! VBS    
+
+!!!!!!!!   OUTPUT   !!!!!!!!
 
 !   output
 
@@ -1656,6 +1966,19 @@ implicit none
 
         write (42,formatstring) &
           thour,printhour,(beta_ft(k),k=1,nchsp)
+        
+        if(lvbs) then
+          write (43,formatstring) &
+          thour,printhour, OAbgb, Coa, C1Tmc, C2Tmc, C3Tmc, C4Tmc, C1Imc, C2Imc, C3Imc, X1, X2, X3, X4, mr2mc_PRODT, mr2mc_PRODI, beta_terp, beta_iso   
+
+          write (44,formatstring) &
+          thour,printhour, OAbgb_ft, Coa_ft, C1Tmc_ft, C2Tmc_ft, C3Tmc_ft, C4Tmc_ft, C1Imc_ft, C2Imc_ft, C3Imc_ft, X1_ft, X2_ft, X3_ft, X4_ft
+        end if
+        
+        if(lBVOC)then
+          write (45,formatstring) &
+          thour,printhour, F_ISO, F_TERP, gamma_ISO, gammaT_ISO, gammap, gammace_ISO, gamma_MT, gammaT_MT, gammace_MT, gammaLAI, gammasm 
+        endif
 
         write (47,'(2F14.4,6(E14.5),f8.1)') &
         thour,printhour,6000. * RC(R_1%loc)%Keff_cbl, 60. * RC(R_NO2%loc)%Keff_cbl,&
@@ -1755,6 +2078,13 @@ implicit none
   close (40)
   close (41)
   close (42)
+  if(lvbs) then
+    close (43)
+    close (44)
+  endif
+  if(lBVOC)then
+    close (45)
+  endif
   close (46)
   close (47)
   close (50)

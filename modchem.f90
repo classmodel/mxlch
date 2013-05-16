@@ -53,6 +53,7 @@ real :: t_ref_ft     = 298.
 real :: p_ref_ft     = 1013.5
 real :: q_ref_ft     = 10.
 real :: pressure_ft
+real :: convcbl, convft
 
 type RCdef
 	character*6 rname
@@ -136,6 +137,6 @@ type location
 	integer ::  loc = 0
 end type location
 
-type (location) :: INERT, PRODUC , O3, O1D, NO2, NO, NO3, N2O5, HNO3, RH, R, ISO, RO2, H2O2, HO2, HO, CO, CO2, H2O, NH3, H2SO4, CH2O, CH3O2, MVK
-type (location) :: R_O3,  R_NO,  R_NO2,  R_RH,  R_CO,  R_HNO3,  R_23,  R_25,  R_26a,  R_28,  R_43,  R_45,  R_54A,  R_57A,  R_58A,  R_61A,  R_62A,  R_63Aa,  R_63Ab, R_CH2O, R_1
+type (location) :: INERT, PRODUC , O3, O1D, NO2, NO, NO3, N2O5, HNO3, RH, R, ISO, RO2, H2O2, HO2, HO, CO, CO2, H2O, NH3, H2SO4, CH2O, CH3O2, MVK, TERP, OAbg, CiT, CiI
+type (location) :: R_O3,  R_NO,  R_NO2,  R_RH,  R_CO,  R_HNO3,  R_23,  R_25,  R_26a,  R_28,  R_43,  R_45,  R_54A,  R_57A,  R_58A,  R_61A,  R_62A,  R_63Aa,  R_63Ab, R_CH2O, R_1 , R_ISORO2NO, R_ISORO2HO2   
 end module

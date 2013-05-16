@@ -187,7 +187,7 @@ implicit none
 
   print *, 'Total number of reactions is',react,'of which', count_raddep,'is/are radiation dependent'
 
-  !we now make tnor equal to real number of reactions it could have been to large
+  !we now make tnor equal to real number of reactions it could have been too large
   tnor = react
 
   !make a list of chemical species and in which reaction number it is formed and/or losst
@@ -703,7 +703,11 @@ implicit none
   NH3%name    = 'NH3'
   H2SO4%name  = 'H2SO4'
   ISO%name    = 'ISO'
-
+  TERP%name   = 'TERP'
+  OAbg%name   = 'OAbg'
+  CiT%name    = 'CiT'
+  CiI%name    = 'CiI'
+  
   !set all 0 elements to 1. incase we do calculations with unknown componets
   c_cbl(0)=1.
   c_ft(0)=1.
@@ -738,6 +742,10 @@ implicit none
     if (H2SO4%name == chem_name(i)) then ; H2SO4%loc  = i;  cycle; endif
     if (INERT%name == chem_name(i)) then ; INERT%loc  = i;  cycle; endif
     if (PRODUC%name == chem_name(i)) then ; PRODUC%loc  = i;  cycle; endif
+    if (TERP%name == chem_name(i)) then ; TERP%loc  = i;  cycle; endif
+    if (OAbg%name == chem_name(i)) then ; OAbg%loc  = i;  cycle; endif
+    if (CiT%name == chem_name(i)) then ; CiT%loc  = i; cycle; endif
+    if (CiI%name == chem_name(i)) then ; CiI%loc  = i; cycle; endif   
   enddo
 
   read(10,'(a)',err=400)scalarline
@@ -860,6 +868,8 @@ implicit none
   R_63Aa%name = 'R_63A'
   R_63Ab%name = 'R_63Ab'
   R_CH2O%name = 'R_06'
+  R_ISORO2NO%name = 'R_IRO2NO'
+  R_ISORO2HO2%name = 'R_IRO2HO2'
 
   do i=1, tnor
     if( reactions(i)%name == R_O3%name )   then ; R_O3%loc   = i;  cycle; endif
@@ -883,6 +893,20 @@ implicit none
     if( reactions(i)%name == R_63Aa%name ) then ; R_63Aa%loc = i;  cycle; endif
     if( reactions(i)%name == R_63Ab%name ) then ; R_63Ab%loc = i;  cycle; endif
     if( reactions(i)%name == R_CH2O%name ) then ; R_CH2O%loc = i;  cycle; endif
+  enddo
+
+  ! identify reactions by type and species: if function = A AND species1 = B AND species2 = C, then R...%loc = bingo! 
+  do i=1, tnor
+    if (RC(i)%RadDep .eq. 0 .and. RC(i)%func1 .eq. 1) then
+     if (reactions(i)%inp(1)%name .eq. "NO" .and. reactions(i)%inp(1)%name .eq. "IRO2" .or. reactions(i)%inp(1)%name .eq. "IRO2" .and. reactions(i)%inp(2)%name .eq. "NO") then
+      print *, 'IRO2 + NO reaction no. =', i
+      R_ISORO2NO%loc   = i; cycle;
+     endif
+     if (reactions(i)%inp(1)%name .eq. "HO2" .and. reactions(i)%inp(1)%name .eq. "IRO2" .or. reactions(i)%inp(1)%name .eq. "IRO2" .and. reactions(i)%inp(2)%name .eq. "HO2") then
+      print *, 'IRO2 + HO2 reaction no. =', i
+      R_ISORO2HO2%loc   = i; cycle;
+     endif 
+    endif
   enddo
 
   end subroutine

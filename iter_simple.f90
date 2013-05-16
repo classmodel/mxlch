@@ -26,6 +26,9 @@ else
    conv_ft =6.023e8 * pressure_ft / (Rfact*temp_ft)  ! =1 /6.77e-16/1000/60 = (6.023e23/e15)*P/RT
 endif
 
+convcbl = conv_cbl
+convft  = conv_ft
+
 !c
 !c   Calculation solar zenith angle according to LES
 !c
