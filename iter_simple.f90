@@ -81,7 +81,7 @@ endif
          RC(i)%Keff_cbl = K * RC(i)%D *  c_cbl(H2O%loc)*1.e-9 / &
               (RC(i)%D * c_cbl(H2O%loc)*1.e-9  + RC(i)%E * (1.- c_cbl(H2O%loc)*1.e-9))
          RC(i)%Keff_ft = K * RC(i)%D *  c_ft(H2O%loc)* 1.e-9 / &
-              (RC(i)%D * c_cbl(H2O%loc)* 1.e-9 + RC(i)%E * (1.- c_cbl(H2O%loc)*1.e-9))
+              (RC(i)%D * c_ft(H2O%loc)* 1.e-9 + RC(i)%E * (1.- c_ft(H2O%loc)*1.e-9))
        case default !if someone put by mistake a number
          RC(i)%Keff_cbl = 1
          RC(i)%Keff_ft  = 1
