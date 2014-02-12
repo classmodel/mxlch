@@ -192,7 +192,8 @@ implicit none
   double precision :: BaserateISO = 0.0, BaserateTER = 0.0
   double precision :: dwg = 0.06, gammaLAI, w1, gammasm
   double precision :: beta_MT, Tref, gammaT_MT, gammace_MT, gamma_MT, eps_MT, rho_MT, ER_MT, mm_MT, cf_MT, F_TERP 
-  double precision :: Thr, Tdaily, Topt, C_T1, C_T2, x, Eopt, gammaT_ISO, aa, Pac, Pdaily, Ptoa, phi, gammap, gammace_ISO, gamma_ISO, eps_ISO, rho_ISO, ER_ISO, mm_ISO, cf_ISO, F_ISO
+  double precision :: Thr, Tdaily, Topt, C_T1, C_T2, x, Eopt, gammaT_ISO, sea, Pac, Pdaily, Ptoa, phi, gammap, gammace_ISO, gamma_ISO, eps_ISO, rho_ISO, ER_ISO, mm_ISO, cf_ISO, F_ISO
+  double precision :: accPPFD = 0.,  accT = 0.
   
   !Define variables for the 'saturation level' program
   integer :: i,a,n,aver3,sat_lev
@@ -378,8 +379,8 @@ implicit none
     R10     ,&     !respiration at 10 C [mg CO2 m-2 s-1]
     Eact0   ,&     !activation energy [53.3 kJ kmol-1]
     lBVOC   ,&     !Enable the calculation of BVOC (isoprene, terpene) emissions
-    BaserateIso ,& !Base emission rate for isoprene emissions [microg m^4 h^-1]
-    BaserateTer    !Base emission rate for terprene emissions [microg m^4 h^-1]
+    BaserateIso ,& !Base emission rate for isoprene emissions [mg m^2 h^-1]
+    BaserateTer    !Base emission rate for terprene emissions [mg m^2 h^-1]
 
   ! option for the chemistry
   namelist/NAMCHEM/ &
@@ -604,6 +605,20 @@ implicit none
     print *,""
     print *,""
   endif
+  if (lBVOC .and. (.not. llandsurface) ) then
+    llandsurface = .true.
+    print *,""
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,"You enabled interactive VOC emissions without enabling"
+    print *,"the land surface scheme"
+    print *,"llandsurface is automatically enabled"
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,""
+  endif
 
 
   write(formatstring,'(a,a)')'mkdir ',trim(outdir)
@@ -634,6 +649,7 @@ implicit none
     endif
   enddo
   daylength = enddaytime - startdaytime
+  zenith = -9999
 
   write (*,*)'LCHEM=',lchem,'LDIUVAR=',ldiuvar,'LCONST=',lchconst,'LFLUX=',lflux,'LVBS=',lvbs, 'LBVOC=', lBVOC
   write (*,*) ' long',long
@@ -938,7 +954,6 @@ implicit none
       costh = max(0.0,cos(getth(1.0*day,latt,long,thour))) 
       Ta    = thetam(1)*((((100*pressure)-zsl*rho*g)/(100*pressure))**(Rd/Cp))!pressure*100 to compensate for SI, 0.1 to get T at top of the SL
       Tr    = (0.6 + 0.2 * costh) * (1 - 0.4 * cc)
-
       Swin  = S0 * Tr * costh
       Swout = albedo * Swin
       Lwin  = 0.8 * bolz * (Ta ** 4)
@@ -1187,7 +1202,7 @@ implicit none
                + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) + Lambda * Tsoil) &
                * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
                * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
-               
+
         esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
         qsatsurf = 0.622 * esatsurf / (pressure*100)
 
@@ -1219,21 +1234,6 @@ implicit none
         wcs    = wcsmax
 
         if (lBVOC) then  ! BVOC emissions
-          if (llandsurface .eqv. .false. .or. lrsAgs .eqv. .false.) then
-            print *,""
-            print *,""
-            print *,"!!!!!!!!!!!!!!!!!!!!!"
-            print *,""
-            print *,"You enabled interactive VOC emissions without enabling"
-            print *,"the land surface scheme (llandsurface) and/or A-gs (lrsAgs)"
-            print *,"VOC emissions can not be calculated due to missing input variables!"
-            print *,""
-            print *,"!!!!!!!!!!!!!!!!!!!!!"
-            print *,""
-            print *,""
-            stop 'switch land surface & A-gs on'
-          endif
-
            ! MT-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm, and Sakulnayontvittaya'08      
            gammaLAI   = 0.49*LAI/((1.+0.2*LAI**2.)**0.5)
            
@@ -1253,17 +1253,18 @@ implicit none
            gammace_MT = gammaLAI * gammaT_MT ! emission activity factor canopy environment (-) (eq.10, Guenther96)
            gamma_MT   = gammace_MT * gammasm ! emission activity factor terpene (-) (eq.2, Guenther96) (no light and leaf age dependence)
              
-           eps_MT     = BaserateTer ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
+           eps_MT     = BaserateTer ! emission factor representing net in-canopy emission rate at standard conditions (ug m-2 h-1 at 303 K)
            rho_MT     = 1. ! factor that accounts for chemical production and loss within plant canopies (-)
-           ER_MT      = eps_MT * gamma_MT * rho_MT ! monoterpene emission rate (μg m-2 h-1)
+           ER_MT      = eps_MT * gamma_MT * rho_MT ! monoterpene emission rate (mg m-2 h-1)
             
            mm_MT      = 10.*12.01 + 16.*1.008    ! molecular mass C10H16
-           cf_MT      = mm_MT*((pressure*100.)/(Rgas*Ts)*3600*1e-3) ! flux conversion factor ppb m s-1 -> ug m-2 h-1
-           F_TERP     = ER_MT / cf_MT             ! isoprene emission rate (ppb m s-1)
-
+           cf_MT      = mm_MT*((pressure*100.)/(Rgas*Ts)*3600*1e-6) ! flux conversion factor ppb m s-1 -> mg m-2 h-1
+           F_TERP     = ER_MT / cf_MT             ! monoterpene emission rate (ppb m s-1)
+           
            !ISO-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm         
+           accT       = accT + Ts*dtime ! accumulated temperature
            Thr        = Ts ! should be hourly average temperature (K)
-           Tdaily     = 295. ! daily average temperature (K)
+           Tdaily     = accT/sec ! daily average temperature (K)
            Topt       = 313 + (0.6*(Tdaily-297)) ! (adapted from eq. 8 Guenther06)
            C_T1       = 80.  ! empirical coefficient
            C_T2       = 200. ! empirical coefficient
@@ -1271,22 +1272,26 @@ implicit none
            Eopt       = 1.75*exp(0.08*(Tdaily-297)) 
            gammaT_ISO = Eopt * C_T2 * exp(C_T1*x)/(C_T2-C_T1*(1-exp(C_T2*x)))
 
-           aa         = zenith + 90. ! solar angle relative to surface = zenith angle + 90 (deg.)
-           Pac        = PAR ! above canopy PPFD (umol m-2 s-1)
-           Pdaily     = PAR !?! daily average above canopy PPFD (umol m-2 s-1)
-           Ptoa       = 3000. + 99*cos((2*pi*((day-10.)/365.))*pi/180.0) ! 
-           phi        = Pac/(sin(aa*(pi/180.0))*Ptoa)! above canopy PPFD transmission (-) ! 
-           gammap     = sin(aa*(pi/180.0))*(2.46*(1.+0.0005*(Pdaily-400.))*phi*0.9*phi**2.) ! 
 
-           gammace_ISO= gammaLAI * gammaT_ISO * gammap
+           ! calculate PPFD (photosynthetic photon flux density) above canopy
+           ! assume 4.766 (umol m-2 s-1) per (W m-2)
+           ! assume 1/2 of Swin is in 400-700nm band   
+           Pac        = Swin * 4.766 * 0.5 ! above canopy PPFD (umol m-2 s-1)
+           accPPFD    = accPPFD + Pac*dtime ! accumulated PPFD
+           Pdaily     = accPPFD/sec ! daily average above canopy PPFD (umol m-2 s-1)
+           Ptoa       = 3000. + 99*cos(2*pi*(day-10.)/365.) ! PPFD at top of atmosphere 
+           zenith     = acos(costh)
+           sea        = max(0.0, 90*(pi/180.) - zenith)  ! solar elevation angle =  90 (deg.) - zenith angle   
+           phi        = Pac/(sin(sea)*Ptoa)! above canopy PPFD transmission (-) ! 
+           gammap     = sin(sea)*(2.46*(1.+0.0005*(Pdaily-400.))*phi*0.9*phi**2.) ! 
+           gammace_ISO = gammaLAI * gammaT_ISO * gammap
            gamma_ISO  = gammace_ISO * gammasm
-               
-           eps_ISO    = BaserateIso  ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
-           rho_ISO    = 0.96     
-           ER_ISO     = eps_ISO * gamma_ISO * rho_ISO ! isoprene emission rate (μg m-2 h-1)
+           eps_ISO    = BaserateIso  ! emission factor representing net in-canopy emission rate at standard conditions (mg m-2 h-1 at 303 K)
+           rho_ISO    = 0.96 ! factor that accounts for chemical production and loss within plant canopies (-)   
+           ER_ISO     = eps_ISO * gamma_ISO * rho_ISO ! isoprene emission rate (mg m-2 h-1)
            mm_ISO     = 5.*12.01 + 8.*1.008      ! molecular mass C5H8
-           cf_ISO     = mm_ISO*((pressure*100.)/(Rgas*Ts)*3600*1e-3)! flux conversion factor ppb m s-1 -> ug m-2 h-1
-           F_ISO      = ER_ISO / cf_ISO           ! monoterpene emission rate (ppb m s-1)
+           cf_ISO     = mm_ISO*((pressure*100.)/(Rgas*Ts)*3600*1e-6)! flux conversion factor ppb m s-1 -> mg m-2 h-1
+           F_ISO      = ER_ISO / cf_ISO           ! isoprene emission rate (ppb m s-1)
         endif ! bVOC
 
       else !llandsurface
@@ -1400,13 +1405,9 @@ implicit none
       endif
       !HGO if lCO2Ags, then calculate wCO2 @ CO2%loc apart lchem and CO2%loc
       !.gt. 0
-      if (lBVOC) then
-        if(lchem .and. (TERP%loc .gt. 0) ) then
-          Q_cbl(TERP%loc) = F_TERP
-        endif
-        if(lchem .and. (ISO%loc .gt. 0) ) then
-          Q_cbl(ISO%loc) = F_ISO
-        endif
+      if (lBVOC .and. lchem) then ! if lBVOC is true, other VOC fluxes are overwritten by MEGAN output
+        Q_cbl(TERP%loc) = F_TERP
+        Q_cbl(ISO%loc)  = F_ISO
       endif
     endif !(c_wth)
 
@@ -1415,7 +1416,7 @@ implicit none
     if (t==1) then ! write in initial_chem the used fluxes
       write (46,*)' '
       write (46,*)'  Q_cbl(INERT%loc)= Q_cbl * sin(pi * (sec-daytime_start)/daylenght)'
-      write (46,*)'  Q_cbl(RH%loc)   = Q_cbl * sin(pi * (sec-daytime_start)/daylenght)'
+      !write (46,*)'  Q_cbl(RH%loc)   = Q_cbl * sin(pi * (sec-daytime_start)/daylenght)'
     endif
 
 !   subsidence velocity (large-scale advection)
@@ -1982,7 +1983,7 @@ implicit none
 
         write (47,'(2F14.4,6(E14.5),f8.1)') &
         thour,printhour,6000. * RC(R_1%loc)%Keff_cbl, 60. * RC(R_NO2%loc)%Keff_cbl,&
-               6000.*RC(R_CH2O%loc)%Keff_cbl,photo, zenith,Q_cbl(RH%loc), zenith*180/pi
+               6000.*RC(R_CH2O%loc)%Keff_cbl,photo, zenith, zenith*180/pi!, Q_cbl(RH%loc)
 
         write (48,formatstring) &
           thour,printhour,(c_ft(k),k=1,nchsp)
@@ -2115,7 +2116,6 @@ implicit none
   delta = asin(sin(obliq)*sin(deday))
   houra = lonr - pi + xhr* (2.*pi/24.)
   getth = acos(sin(delta)*sin(latr) +  cos(delta)*cos(latr)*cos(houra))
-  
   return
 end
 

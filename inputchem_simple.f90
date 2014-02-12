@@ -698,7 +698,7 @@ implicit none
   H2O%name    = 'H2O'
   CO%name     = 'CO'
   CO2%name    = 'CO2'
-  RH%name     = 'ISO'
+!  RH%name     = 'ISO'
   R%name      = 'R'
   NH3%name    = 'NH3'
   H2SO4%name  = 'H2SO4'
@@ -735,14 +735,14 @@ implicit none
     if (H2O%name   == chem_name(i)) then ; H2O%loc  = i;  cycle; endif
     if (CO%name    == chem_name(i)) then ; CO%loc   = i;  cycle; endif
     if (CO2%name   == chem_name(i)) then ; CO2%loc  = i;  cycle; endif
-    if (RH%name    == chem_name(i)) then ; RH%loc   = i;  cycle; endif
+!    if (RH%name    == chem_name(i)) then ; RH%loc   = i;  cycle; endif
     if (ISO%name   == chem_name(i)) then ; ISO%loc  = i;  cycle; endif
     if (R%name     == chem_name(i)) then ; R%loc    = i;  cycle; endif
     if (NH3%name   == chem_name(i)) then ; NH3%loc  = i;  cycle; endif
     if (H2SO4%name == chem_name(i)) then ; H2SO4%loc  = i;  cycle; endif
     if (INERT%name == chem_name(i)) then ; INERT%loc  = i;  cycle; endif
     if (PRODUC%name == chem_name(i)) then ; PRODUC%loc  = i;  cycle; endif
-    if (TERP%name == chem_name(i)) then ; TERP%loc  = i;  cycle; endif
+    if (TERP%name == chem_name(i)) then  ; TERP%loc  = i;  cycle; endif
     if (OAbg%name == chem_name(i)) then ; OAbg%loc  = i;  cycle; endif
     if (CiT%name == chem_name(i)) then ; CiT%loc  = i; cycle; endif
     if (CiI%name == chem_name(i)) then ; CiI%loc  = i; cycle; endif   

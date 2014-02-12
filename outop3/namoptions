@@ -85,20 +85,20 @@ endtime_adv     = 42000
 /
 
 &NAMSURFLAYER
-lsurfacelayer   = .false.
+lsurfacelayer   = .true.
 z0m             = 0.05
 z0h             = 0.01
 /
 
 &NAMRAD
-lradiation = .false.
+lradiation = .true.
 cc         = 0.0
 S0         = 1376.
 albedo     = 0.27326
 /
 
 &NAMSURFACE
-llandsurface = .false.
+llandsurface = .true.
 Qtot         = -1000000
 Ts           = 287.2
 wwilt        = 0.314
@@ -143,13 +143,13 @@ wsmax        = 0.55
 wsmin        = 0.005 
 R10          = 0.23  
 Eact0        = 53.3e3
-lBVOC        = .false.
-BaserateIso  = 300.
-BaserateTer  = 300.
+lBVOC        = .true.
+BaserateIso  = 1.65     ! base emission rate isoprene (mg m-2 h-1) 
+BaserateTer  = 0.4      ! base emission rate monoterpenes (mg m-2 h-1) 
 /
 
 &NAMSOA
-lvbs         = .true.
+lvbs         = .false.
 low_high_NOx = 0
 alpha1_TERP_low  = 0.107
 alpha2_TERP_low  = 0.092

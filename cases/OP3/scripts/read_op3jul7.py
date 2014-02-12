@@ -6,7 +6,7 @@ from numpy import *
 from StringIO import StringIO
 from matplotlib.ticker import OldScalarFormatter
 from matplotlib.mathtext import *
-import pickle 
+#import pickle 
 from scipy.interpolate import interp1d
 from scipy import linspace, polyval, polyfit, sqrt, stats
 #from meanbin import meanbin
@@ -19,8 +19,12 @@ mphoto  = loadtxt('/home/ruud/MXLCH_SOA/outop3/chem_photo', skiprows=3)
 mkeff   = loadtxt('/home/ruud/MXLCH_SOA/outop3/keff_cbl', skiprows=1) 
 mftr    = loadtxt('/home/ruud/MXLCH_SOA/outop3/chem_ftr', skiprows=3) 
 msoa    = loadtxt('/home/ruud/MXLCH_SOA/outop3/soa_part', skiprows=3) 
-msoaft  = loadtxt('/home/ruud/MXLCH_SOA/outop3/soa_ftr', skiprows=3) 
+mland   = loadtxt('/home/ruud/MXLCH_SOA/outop3/output_land', skiprows=3) 
+mbvoc   = loadtxt('/home/ruud/MXLCH_SOA/outop3/voc_em', skiprows=3) 
+#msoaft  = loadtxt('/home/ruud/MXLCH_SOA/outop3/soa_ftr', skiprows=3) 
 mPLOH   = loadtxt('/home/ruud/MXLCH_SOA/outop3/PL/OH', skiprows=3) 
+mPLTERP = loadtxt('/home/ruud/MXLCH_SOA/outop3/PL/TERP', skiprows=3)
+mPLISO  = loadtxt('/home/ruud/MXLCH_SOA/outop3/PL/ISO', skiprows=3)
 
 ######################    reading measurement data   ###############################
 mNOx	= loadtxt('/home/ruud/MXLCH_SOA/cases/OP3/data/ceh-nox-gradient_bukit-atur_20080625.na', skiprows=40) # 30, 45, 60, 75m
@@ -134,6 +138,14 @@ aOH_LR09 = -mPLOH[:,5]
 aOH_PR19 =  mPLOH[:,15]
 
 aTERP_ftm = mftr[:,24]
+atm_pl    = mPLTERP[:,0]+8 # convert UTC to LT
+aTERPm_l    = -mPLTERP[:,5]
+aTERPm_LR29 = -mPLTERP[:,3]
+aTERPm_LR30 = -mPLTERP[:,4]
+
+aISO_ftm = mftr[:,11]
+aISOm_l    = -mPLISO[:,4]
+aISOm_LR09 = -mPLISO[:,3]
 
 aOAbgm    = msoa[:,2]
 aCoam     = msoa[:,3]
@@ -153,22 +165,25 @@ amr2mc_PRODI = msoa[:,16]
 abeta_terp = msoa[:,17]
 abeta_iso  = msoa[:,18]
 
-aOAbg_ftm = msoaft[:,2] # ug m-3!
-aCoam_ftm = msoaft[:,3]
-aC1T_ftm = msoaft[:,4]
-aC2T_ftm = msoaft[:,5]
-aC3T_ftm = msoaft[:,6]
-aC4T_ftm = msoaft[:,7]
-aC1I_ftm = msoaft[:,8]
-aC2I_ftm = msoaft[:,9]
-aC3I_ftm = msoaft[:,10]
+aSwin     = mland[:,2]
+
+aFiso_meg     = mbvoc[:,2]
+aFterp_meg    = mbvoc[:,3]
+#aOAbg_ftm = msoaft[:,2] # ug m-3!
+#aCoam_ftm = msoaft[:,3]
+#aC1T_ftm = msoaft[:,4]
+#aC2T_ftm = msoaft[:,5]
+#aC3T_ftm = msoaft[:,6]
+#aC4T_ftm = msoaft[:,7]
+#aC1I_ftm = msoaft[:,8]
+#aC2I_ftm = msoaft[:,9]
+#aC3I_ftm = msoaft[:,10]
 
 aphim	= mphoto[:,5]
 ajNO2m	= mphoto[:,3]	#jno2*60(min)
 ajO3m	= mphoto[:,2]	#jo3*1000*60
-
 azenm	= mphoto[:,6]
-asozm	= mphoto[:,8]
+asozm	= mphoto[:,7]
 
 # parameters & constants
 R         = 8.3145                      # gas constant (J mol-1 k-1)
@@ -225,6 +240,18 @@ aC1mcm   = sum((aC1Tmcm, aC1Imcm),0)
 aC2mcm   = sum((aC2Tmcm, aC2Imcm),0)
 aC3mcm   = sum((aC3Tmcm, aC3Imcm),0)
 aC4mcm   = aC4Tmcm 
+
+# dTERP/dt = wTERPs/h + wTERPe/h + RTERP
+awTERPs    = aFterp_meg/ahm
+awTERPe    = (awem * (aTERP_ftm - aTERPm))/ahm
+adTERP_dt  = aTERPm_l + awTERPs[1:-1] + awTERPe[1:-1]
+adTERP_dt2 = (aTERPm[0:-1-1] - aTERPm[1:-1]) / (atm[0:-1-1] - atm[1:-1])
+
+# dISO/dt = wISOs/h + wISOe/h + RISO
+awISOs    = aFiso_meg/ahm
+awISOe    = (awem * (aISO_ftm - aISOm))/ahm
+adISO_dt  = aISOm_l + awISOs[1:-1] + awISOe[1:-1]
+adISO_dt2 = (aISOm[0:-1-1] - aISOm[1:-1]) / (atm[0:-1-1] - atm[1:-1])
 
 #####     calculations    #####################################################################################
 
@@ -519,6 +546,26 @@ legend(('TSOA + ISOA','OOA2'),'upper left')
 grid(True)
 
 
+figure(6, figsize=(11.5,9))
+title('OP3 7 July 2008')
+subplot(221)
+plot(atm,aFiso_meg*fcISO,'k-',at_voho,aFISO,'k.')#,at_oaho,aOOA2,'k.')
+ylabel('F_ISO (mg m-2 h-1)', fontsize=16)
+xlabel('time LT (h)', fontsize=16)
+xlim([6,14])
+legend(('MEGAN','obs.'),'upper left')
+grid(True)
+
+subplot(222)
+plot(atm,aFterp_meg*fcTERP,'k-',at_voho,aFTERP,'k.')#,at_oaho,aOOA2,'k.')
+ylabel('F_TERP (mg m-2 h-1)', fontsize=16)
+xlabel('time LT (h)', fontsize=16)
+xlim([6,14])
+legend(('MEGAN','obs.'),'upper left')
+grid(True)
+
+
+'''
 fig = figure(4, figsize=(11.5,9)) # sensitivity subsidence & advection
 subplot(221)
 plot(atm,aCoam-0.58,'-',at_oaho,aOOA2,'k.')
@@ -547,7 +594,8 @@ text(6.3,13.2,'(d)', fontsize=12)
 xlim([6,14])
 ylim([11,14])
 grid(True)
-
+'''
+'''
 fig = figure(5, figsize=(11.5,9)) # OH-recycling
 subplot(221)
 plot(atm,aCoam-0.58,'-',at_oaho,aOOA2,'k.')
@@ -576,5 +624,25 @@ xlabel('time LT (h)', fontsize=16)
 xlim([6,14])
 text(6.3,0.37,'(d)', fontsize=12)
 grid(True)
+'''
+figure(7, figsize=(8.3,6.1)) # VOC-tendency
+subplot(211)
+plot(atm[1:-1],adTERP_dt2,'r-',atm, awTERPs*3600, 'b-', atm, awTERPe*3600, 'm-', atm_pl,aTERPm_l*3600,'g',atm[1:-1],adTERP_dt*3600,'k--',)
+ylabel(u'dTERP/dt (ppb h-1)', fontsize=16)
+legend(('total','emission','entrainment','chemistry','sum'), 'lower left')
+xlim([6,14])
+grid(True)
+
+subplot(212)
+plot(atm[1:-1],adISO_dt2,'r-',atm, awISOs*3600, 'b-', atm, awISOe*3600, 'm-', atm_pl,aISOm_l*3600,'g',atm[1:-1],adISO_dt*3600,'k--',)
+ylabel(u'dISO/dt (ppb h-1)', fontsize=16)
+legend(('total','emission','entrainment','chemistry','sum'), 'lower left')
+xlim([6,14])
+grid(True)
 
 show()
+
+#awTERPs    = aFterp_meg/ahm
+#awTERPe    = (awem * (aTERP_ftm - aTERPm))/ahm
+#adTERP_dt  = aTERPm_l + awTERPs[1:-1] + awTERPe[1:-1]
+#adTERP_dt2 = (aTERPm[0:-1-1] - aTERPm[1:-1]) / (atm[0:-1-1] - atm[1:-1])
