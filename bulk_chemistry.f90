@@ -99,7 +99,7 @@ implicit none
   integer :: runtime,t, time=24*3600.0,tt
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
-  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit, gamma2
+  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -1505,6 +1505,7 @@ implicit none
       endif
       
       zi(2)  =zi(1)+(we+ws-wm)*dtime            !eq (8)
+      hcrit    = hcrit + ws * dtime
       dtheta(2)=dtheta(1)+ ((gamma*(we-wm))- &
               (1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime           !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
@@ -1520,6 +1521,7 @@ implicit none
 
       zi(2)   = zi(1) + ((1/(gamma*(zi(1)+inf)))*((1+beta)*wthetav) &
               + ws)*dtime
+      hcrit   = hcrit + ws * dtime
       dtheta(2)=0.
       thetam(2)=thetam(1)+ &
             ((1/(zi(1)+inf))*wthetas)*dtime + lstheta*dtime         !eq  (1)
@@ -2047,6 +2049,7 @@ implicit none
 
     if(.not. lfixedlapserates) then
       gamma  = gamma  * (1 + wsls * dtime)
+      gamma2 = gamma2 * (1 + wsls * dtime)
       gammaq = gammaq * (1 + wsls * dtime)
       gammac = gammac * (1 + wsls * dtime)
       gammau = gammau * (1 + wsls * dtime)
