@@ -99,7 +99,7 @@ implicit none
   integer :: runtime,t, time=24*3600.0,tt
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
-  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006
+  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006, hrough=18.0
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -110,6 +110,7 @@ implicit none
 !! Regular large obstacle coverage (suburb, forest)        0.50 - 1.0
 !! http://www.webmet.com/met_monitoring/663.html
 !!
+  integer :: psi_func=1
   real isec,mins,ttt, sec
   integer :: day = 80
   real :: hour = 0
@@ -225,6 +226,7 @@ implicit none
   double precision photo
   real getth
   real psim,psih
+  real psimrough,psihrough
   real factor, factor1, factor2, factor3, printhour
   real a0, a1, a2
 
@@ -323,7 +325,9 @@ implicit none
   namelist/NAMSURFLAYER/ &
     lsurfacelayer,&
     z0m,&
-    z0h
+    z0h,&
+    psi_func,&     !Which psi functions? 1) standard 2) roughness layer due to canopy 3) total canopy effect
+    hrough         !Roughness sublayer height (compared to displacement height); has to be bigger than 0 for psi_func=2 to function!
 
   namelist/NAMRAD/ &
     lradiation,& !radiation scheme to determine Q and SW
@@ -971,36 +975,105 @@ implicit none
       L0          = sign(dble(0.1),Rib)
 
       iter        = 0
-      do while(.true.)
-        iter      = iter + 1
-        L0        = L
-        fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
-        Lstart    = L - 0.001*L
-        Lend      = L + 0.001*L
-        fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart)) ** 2.) &
-                  - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend)) ** 2.) ) / (Lstart - Lend)
-        L         = L - fx / fxdif
-        L         = sign(min(abs(L),1.e6),L)!capping L
 
-        if(abs((L - L0)/L) < 1e-4) exit 
-        if(abs((L - L0)) < 1e-3) exit 
-      enddo
+      select case(psi_func)
+        case(1) !Standard psi functions
+          do while(.true.)
+            iter      = iter + 1
+            L0        = L
+            fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
+            Lstart    = L - 0.001*L
+            Lend      = L + 0.001*L
+            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart)) ** 2.) &
+                      - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend)) ** 2.) ) / (Lstart - Lend)
+            L         = L - fx / fxdif
+            L         = sign(min(abs(L),1.e6),L)!capping L
 
-      Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
-      Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L))
+            if(abs((L - L0)/L) < 1e-4) exit 
+            if(abs((L - L0)) < 1e-3) exit 
+          enddo
 
-      ustar  = sqrt(Constm) * ueff
-      if(ustar .le. 0) stop "ustar has to be greater than 0"
-      uws    = - Constm * ueff * um(1)
-      vws    = - Constm * ueff * vm(1)
-      
-      T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
-      q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
-      u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
-      v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
-      esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
-      e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
-      rh2m   = e2m / esat2m
+          Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
+          Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L))
+
+          ustar  = sqrt(Constm) * ueff
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          uws    = - Constm * ueff * um(1)
+          vws    = - Constm * ueff * vm(1)
+          
+          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
+          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
+          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
+          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
+          esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
+          e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
+          rh2m   = e2m / esat2m
+
+        case(2) !Correcting for roughness sublayer according to De Ridder (2010)
+          do while(.true.)
+            iter      = iter + 1
+            L0        = L
+            fx        = Rib - zsl / L * (log(zsl / z0h) - psihrough(zsl / L, zsl / hrough) + psihrough(z0h / L, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) ** 2.
+            Lstart    = L - 0.001*L
+            Lend      = L + 0.001*L
+            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psihrough(zsl / Lstart, zsl / hrough) + psihrough(z0h / Lstart, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / Lstart, zsl / hrough) + psimrough(z0m / Lstart, z0m / hrough)) ** 2.) &
+                      - (-zsl / Lend * (log(zsl / z0h)- psihrough(zsl / Lend, zsl / hrough) + psihrough(z0h / Lend, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / Lend, zsl / hrough) + psimrough(z0m / Lend, z0m / hrough)) ** 2.) ) / (Lstart - Lend)
+            L         = L - fx / fxdif
+            L         = sign(min(abs(L),1.e6),L)!capping L
+
+            if(abs((L - L0)/L) < 1e-4) exit 
+            if(abs((L - L0)) < 1e-3) exit 
+          enddo
+
+          Constm =  kappa ** 2. / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) ** 2.
+          Cs     =  kappa ** 2. / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) / (log(zsl / z0h) - psihrough(zsl / L, zsl / hrough) + psihrough(z0h / L, z0h / hrough))
+
+          ustar  = sqrt(Constm) * ueff
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          uws    = - Constm * ueff * um(1)
+          vws    = - Constm * ueff * vm(1)
+          
+          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psihrough(2. / L, 2. / hrough) + psihrough(z0h / L, z0h / hrough))
+          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psihrough(2. / L, 2. / hrough) + psihrough(z0h / L, z0h / hrough))
+          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psimrough(2. / L, 2. / hrough) + psimrough(z0m / L, z0m / hrough))
+          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psimrough(2. / L, 2. / hrough) + psimrough(z0m / L, z0m / hrough))
+          esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
+          e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
+          rh2m   = e2m / esat2m
+
+        case default ! Do the same as for case 1: standard functions
+          do while(.true.)
+            iter      = iter + 1
+            L0        = L
+            fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
+            Lstart    = L - 0.001*L
+            Lend      = L + 0.001*L
+            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart)) ** 2.) &
+                      - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend)) ** 2.) ) / (Lstart - Lend)
+            L         = L - fx / fxdif
+            L         = sign(min(abs(L),1.e6),L)!capping L
+
+            if(abs((L - L0)/L) < 1e-4) exit 
+            if(abs((L - L0)) < 1e-3) exit 
+          enddo
+
+          Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
+          Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L))
+
+          ustar  = sqrt(Constm) * ueff
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          uws    = - Constm * ueff * um(1)
+          vws    = - Constm * ueff * vm(1)
+          
+          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
+          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
+          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
+          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
+          esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
+          e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
+          rh2m   = e2m / esat2m
+
+      end select
 
     else !lsurfacelayer
       ! Two options are considered regarding the momentum surface fluxes.
@@ -2149,6 +2222,42 @@ implicit none
   else
     psih = -2./3. * (real(zeta) - 5./0.35) * exp(-0.35 * real(zeta)) - (1. + (2./3.) * real(zeta)) ** (1.5) - (10./3.) / 0.35 + 1.
   endif
+  return
+end
+
+real function psimrough(zeta,chi) !De Ridder (2010); psih and psim differ in phi and in mu
+implicit none
+  real :: nu = 0.5, lambda = 1.5, mu = 2.59 
+  double precision zeta,chi
+  real x,phi !here, x is used to calculate the phi function
+
+  x = real((1.0 + nu / (mu * chi)) * zeta)
+
+  if(zeta <= 0) then
+    phi = (1. - 16. * x) ** (-0.25)
+  else
+    phi = 1.0 + 5 * x
+  endif
+
+  psimrough = phi * (1/lambda) * log(1+lambda/(mu*chi)) * exp(-mu*chi)
+  return
+end
+
+real function psihrough(zeta,chi) !De Ridder (2010); psih and psim differ in phi and in mu
+implicit none
+  real :: nu = 0.5, lambda = 1.5, mu = 0.95 
+  double precision zeta,chi
+  real x,phi !here, x is used to calculate the phi function
+
+  x = real((1.0 + nu / (mu * chi)) * zeta)
+
+  if(zeta <= 0) then
+    phi = (1. - 16. * x) ** (-0.50)
+  else
+    phi = 1.0 + 5 * x
+  endif
+
+  psihrough = phi * (1/lambda) * log(1+lambda/(mu*chi)) * exp(-mu*chi)
   return
 end
 
