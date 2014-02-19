@@ -1013,11 +1013,11 @@ implicit none
           do while(.true.)
             iter      = iter + 1
             L0        = L
-            fx        = Rib - zsl / L * (log(zsl / z0h) - psihrough(zsl / L, zsl / hrough) + psihrough(z0h / L, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) ** 2.
+            fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L) + psihrough(zsl / L, zsl / hrough)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimrough(zsl / L, zsl / hrough)) ** 2.
             Lstart    = L - 0.001*L
             Lend      = L + 0.001*L
-            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psihrough(zsl / Lstart, zsl / hrough) + psihrough(z0h / Lstart, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / Lstart, zsl / hrough) + psimrough(z0m / Lstart, z0m / hrough)) ** 2.) &
-                      - (-zsl / Lend * (log(zsl / z0h)- psihrough(zsl / Lend, zsl / hrough) + psihrough(z0h / Lend, z0h / hrough)) / (log(zsl / z0m) - psimrough(zsl / Lend, zsl / hrough) + psimrough(z0m / Lend, z0m / hrough)) ** 2.) ) / (Lstart - Lend)
+            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart) + psihrough(zsl / Lstart, zsl / hrough)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart) + psimrough(zsl / Lstart, zsl/ hrough)) ** 2.) &
+                      - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend) + psihrough(zsl / Lend, zsl/ hrough)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend) + psimrough(zsl / Lend, zsl / hrough)) ** 2.) ) / (Lstart - Lend)
             L         = L - fx / fxdif
             L         = sign(min(abs(L),1.e6),L)!capping L
 
@@ -1025,18 +1025,18 @@ implicit none
             if(abs((L - L0)) < 1e-3) exit 
           enddo
 
-          Constm =  kappa ** 2. / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) ** 2.
-          Cs     =  kappa ** 2. / (log(zsl / z0m) - psimrough(zsl / L, zsl / hrough) + psimrough(z0m / L, z0m / hrough)) / (log(zsl / z0h) - psihrough(zsl / L, zsl / hrough) + psihrough(z0h / L, z0h / hrough))
+          Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimrough(zsl / L, zsl / hrough)) ** 2.
+          Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimrough(zsl / L, zsl / hrough)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L) + psihrough(zsl / L, zsl / hrough))
 
           ustar  = sqrt(Constm) * ueff
           if(ustar .le. 0) stop "ustar has to be greater than 0"
           uws    = - Constm * ueff * um(1)
           vws    = - Constm * ueff * vm(1)
           
-          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psihrough(2. / L, 2. / hrough) + psihrough(z0h / L, z0h / hrough))
-          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psihrough(2. / L, 2. / hrough) + psihrough(z0h / L, z0h / hrough))
-          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psimrough(2. / L, 2. / hrough) + psimrough(z0m / L, z0m / hrough))
-          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psimrough(2. / L, 2. / hrough) + psimrough(z0m / L, z0m / hrough))
+          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
+          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
+          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
+          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
           esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
           e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
           rh2m   = e2m / esat2m
