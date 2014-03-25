@@ -121,7 +121,7 @@ implicit none
 
   double precision :: uws=0,vws=0,uws0 = 0.0 , vws0 = 0.0
   double precision ustar
-  double precision :: um(2), vm(2), um0 = 0.0 , vm0 = 0.0, ueff, wstar
+  double precision :: um(2), vm(2), um0 = 0.0 , vm0 = 0.0, ueff, wstar, ueff2m = 0.0
   double precision :: ug = 0.0 , vg = 0.0
   double precision du(2), dv(2)
   double precision :: ws,wsls=0.0
@@ -136,7 +136,7 @@ implicit none
   double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m
   double precision :: Tr,Ta,costh !Needed for radiation calculation
   double precision :: Swin,Swout,Lwin,Lwout !Calculated radiations
-  double precision :: Cs = -1, Constm
+  double precision :: Cs = -1, Cs2m, Constm, Constm2m
   double precision :: esatsurf,qsatsurf,cq,rs=1.e6,ra,zsl,esat,qsat,rssoil
   double precision :: desatdT, dqsatdT, efinal, f1, f2, f3, f4, C1, C2, wgeq
   double precision :: w2=0.42,wfc=0.491,wwilt=0.314,gD=0.0,rsmin=0, LAI = 1.0
@@ -1009,6 +1009,9 @@ implicit none
           e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
           rh2m   = e2m / esat2m
 
+          Cs2m   = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L)) / (log(2.0 / z0h) - psih(2.0 / L) + psih(z0h / L))
+          ueff2m = sqrt(u2m**2 + v2m**2)
+
         case(2) !Correcting for roughness sublayer according to De Ridder (2010)
           do while(.true.)
             iter      = iter + 1
@@ -1030,17 +1033,20 @@ implicit none
 
           ustar  = sqrt(Constm) * ueff
           if(ustar .le. 0) stop "ustar has to be greater than 0"
-          uws    = - Constm * ueff * um(1)
-          vws    = - Constm * ueff * vm(1)
-          
           T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
           q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
-          u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
-          v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
+          u2m    =        sqrt(Constm) * um(1) / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
+          v2m    =        sqrt(Constm) * vm(1) / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimrough(2. / L, 2. / hrough))
           esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
           e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
           rh2m   = e2m / esat2m
 
+          Constm2m = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimrough(2.0 / L, 2.0 / hrough)) ** 2.
+          Cs2m     = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimrough(2.0 / L, 2.0 / hrough)) / (log(2.0 / z0h) - psih(2.0 / L) + psih(z0h / L) + psihrough(2.0 / L, 2.0 / hrough))
+          ueff2m   = sqrt(u2m**2 + v2m**2)
+          uws      = - Constm2m * ueff2m * u2m
+          vws      = - Constm2m * ueff2m * v2m
+          
         case default ! Do the same as for case 1: standard functions
           do while(.true.)
             iter      = iter + 1
@@ -1073,6 +1079,9 @@ implicit none
           e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
           rh2m   = e2m / esat2m
 
+          Cs2m   = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L)) / (log(2.0 / z0h) - psih(2.0 / L) + psih(z0h / L))
+          ueff2m = sqrt(u2m**2 + v2m**2)
+
       end select
 
     else !lsurfacelayer
@@ -1103,6 +1112,9 @@ implicit none
         vws=-ustar**2.*sin(alpha)
 
       endif
+
+      T2m = thetam(1)
+      q2m = qm(1)
 
     endif !lsurfacelayer
 
@@ -1135,8 +1147,13 @@ implicit none
       enddo
     else ! c_wth
       if (llandsurface) then
-        if(ustar .le. 0) stop "ustar has to be greater than 0"
-        ra       = ueff / (ustar ** 2.)
+        if (lsurfacelayer) then
+          if((Cs2m * ueff2m) .le. 0) stop "Unrealistic division in ra calculation"
+          ra     = 1.0 / (Cs2m * ueff2m)
+        else
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          ra     = ueff / (ustar ** 2.)
+        endif
 
         esat     = 0.611e3 * exp(17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86))
         qsat     = 0.622 * esat / (pressure*100)
@@ -1254,25 +1271,25 @@ implicit none
         Wlmx   = LAI * Wmax
         cliq   = min(1.0, Wl / Wlmx)
 
-        Ts     = (Qtot + rho * Cp / ra * thetam(1) + cveg * (1.0-cliq) * rho &
-               * Lv / (ra + rs) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-               + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-               + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) + Lambda * Tsoil) &
+        Ts     = (Qtot + rho * Cp / ra * T2m + cveg * (1.0-cliq) * rho &
+               * Lv / (ra + rs) * (dqsatdT * T2m - qsat + q2m * 1.0e-3) &
+               + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * T2m - qsat + q2m * 1.0e-3) &
+               + cveg * cliq * rho * Lv / ra * (dqsatdT * T2m - qsat + q2m * 1.0e-3) + Lambda * Tsoil) &
                * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
                * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
                
         esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
         qsatsurf = 0.622 * esatsurf / (pressure*100)
 
-        LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-        LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-        LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
+        LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
+        LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
+        LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
 
         Wltend = - LEliq / (rhow * Lv)
         Wl     = Wl + Wltend * dtime
 
         LE     = LEsoil + LEveg + LEliq
-        SH     = rho * Cp / ra * (Ts - thetam(1))
+        SH     = rho * Cp / ra * (Ts - T2m)
         GR     = Lambda * (Ts - Tsoil)
 
 
