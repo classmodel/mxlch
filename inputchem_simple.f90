@@ -68,7 +68,7 @@ implicit none
           !with the intel compiler the next read statement stops when it
           !sees a end of line but xlf(Huygens) and gfortran don't stop and reads garbage
           !so we fill all with spaces and test later which are filled
-      do i=1,25
+      do i=1,15
         spec(i)='           '
       enddo
 
