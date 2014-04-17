@@ -9,7 +9,7 @@ use modchem
 implicit none
 
   character*25 inputchemfile
-  character*15 outdir
+  character*25 outdir
   character*1  dirsep
 
   integer i,j,k,l,react,max_reactions
