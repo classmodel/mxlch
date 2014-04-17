@@ -206,7 +206,7 @@ implicit none
   character(len=40) filename
   integer j
   character(len=2),allocatable :: dummy(:)
-  character(len=15) :: outdir = 'RUN00'
+  character(len=25) :: outdir = 'RUN00'
 
   !Adapted surface fluxes
   !Times in s after start of run
