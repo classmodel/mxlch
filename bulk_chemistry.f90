@@ -960,12 +960,20 @@ implicit none
       if(t==1) then
         thetasurf = Ts 
       else
-        thetasurf = thetam(1) + wthetas / (Cs * ueff)
+        if(psi_func == 2) then !Using a roughness layer like De Ridder (2010)
+          thetasurf = thetam(1) + wthetas / ((Cs/sqrt(Constm)) * ustar) !ustar is not calculated from ueff anymore: thetasurf calculation needs to be adapted so that theta(zsl) (with stability functions) remains equal to thetam(1)
+        else
+          thetasurf = thetam(1) + wthetas / (Cs * ueff)
+        endif
       endif
       esatsurf    = 0.611e3 * exp(17.2694 * (thetasurf - 273.16) / (thetasurf - 35.86))
       qsatsurf    = 0.622 * esatsurf / (pressure*100)
       cq          = 0.0
-      if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
+      if(psi_func == 2) then !Using a roughness layer like De Ridder (2010)
+        if(t/=1) cq = (1. + (Cs/sqrt(Constm)) * ustar * rs) ** (-1.) !ustar is not calculated from ueff anymore: qsurf calculation needs to be adapted so that q(zsl) (with stability functions) remains equal to qm(1)
+      else
+        if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
+      endif
       qsurf       = (1. - cq) * qm(1) + cq * qsatsurf * 1.e3 !HGO factor for qsatsurf which is in kg/kg
 
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
@@ -1031,7 +1039,7 @@ implicit none
           Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimrough(zsl / L, zsl / hrough)) ** 2.
           Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimrough(zsl / L, zsl / hrough)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L) + psihrough(zsl / L, zsl / hrough))
 
-          ustar  = sqrt(Constm) * ueff
+          if(t==1) ustar  = sqrt(Constm) * ueff
           if(ustar .le. 0) stop "ustar has to be greater than 0"
           T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
           q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihrough(2. / L, 2. / hrough))
@@ -1046,6 +1054,7 @@ implicit none
           ueff2m   = sqrt(u2m**2 + v2m**2)
           uws      = - Constm2m * ueff2m * u2m
           vws      = - Constm2m * ueff2m * v2m
+          ustar    = (uws**2 + vws**2)**0.25
           
         case default ! Do the same as for case 1: standard functions
           do while(.true.)
