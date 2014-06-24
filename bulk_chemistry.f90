@@ -133,7 +133,7 @@ implicit none
   double precision :: cc=0.0,Qtot=400.0,albedo=0.2 !cloud cover and incoming energy,albedo, incoming radiation
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
-  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m
+  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m, qsat2m
   double precision :: Tr,Ta,costh !Needed for radiation calculation
   double precision :: Swin,Swout,Lwin,Lwout !Calculated radiations
   double precision :: Cs = -1, Cs2m, Constm, Constm2m
@@ -1170,6 +1170,9 @@ implicit none
         dqsatdT  = 0.622 * desatdT / (pressure*100)
         efinal   = qm(1) * 1.0e-3 * (pressure*100) / 0.622 
 
+        esat2m   = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
+        qsat2m   = 0.622 * esat2m / (pressure*100)
+
         if (lradiation) then
                 f1 = 1.0 / ((0.004 * Swin + 0.05) / (0.81 * (0.004 * Swin + 1.)))
         else
@@ -1281,18 +1284,18 @@ implicit none
         cliq   = min(1.0, Wl / Wlmx)
 
         Ts     = (Qtot + rho * Cp / ra * T2m + cveg * (1.0-cliq) * rho &
-               * Lv / (ra + rs) * (dqsatdT * T2m - qsat + q2m * 1.0e-3) &
-               + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * T2m - qsat + q2m * 1.0e-3) &
-               + cveg * cliq * rho * Lv / ra * (dqsatdT * T2m - qsat + q2m * 1.0e-3) + Lambda * Tsoil) &
+               * Lv / (ra + rs) * (dqsatdT * T2m - qsat2m + q2m * 1.0e-3) &
+               + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * T2m - qsat2m + q2m * 1.0e-3) &
+               + cveg * cliq * rho * Lv / ra * (dqsatdT * T2m - qsat2m + q2m * 1.0e-3) + Lambda * Tsoil) &
                * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
                * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
                
         esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
         qsatsurf = 0.622 * esatsurf / (pressure*100)
 
-        LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
-        LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
-        LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - T2m) + qsat - q2m * 1.0e-3)
+        LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - T2m) + qsat2m - q2m * 1.0e-3)
+        LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - T2m) + qsat2m - q2m * 1.0e-3)
+        LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - T2m) + qsat2m - q2m * 1.0e-3)
 
         Wltend = - LEliq / (rhow * Lv)
         Wl     = Wl + Wltend * dtime
