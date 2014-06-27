@@ -99,7 +99,7 @@ implicit none
   integer :: runtime,t, time=24*3600.0,tt
   double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
   real :: dtime = 1
-  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006, hrough=18.0
+  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006, hrough=18.0, Lc=10, psfac
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -111,6 +111,7 @@ implicit none
 !! http://www.webmet.com/met_monitoring/663.html
 !!
   integer :: psi_func=1
+  logical :: lgenlookup = .false. ! If set to true and psi_func == 3: generate the lookup tables needed for psi functions
   real isec,mins,ttt, sec
   integer :: day = 80
   real :: hour = 0
@@ -133,7 +134,9 @@ implicit none
   double precision :: cc=0.0,Qtot=400.0,albedo=0.2 !cloud cover and incoming energy,albedo, incoming radiation
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
-  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m, qsat2m
+  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m, qsat2m, cbeta, dh, Lmix
+  double precision :: cm1, cm2 = 0.5, ch1, ch2 = 0.5, Scc, fhar, rhar = 0.1
+  double precision :: psimhat2, psihhat2, psimhatzsl = 0.0, psihhatzsl = 0.0
   double precision :: Tr,Ta,costh !Needed for radiation calculation
   double precision :: Swin,Swout,Lwin,Lwout !Calculated radiations
   double precision :: Cs = -1, Cs2m, Constm, Constm2m
@@ -225,8 +228,10 @@ implicit none
   integer startdaytime,enddaytime,daylength,daystart,daytime_start,daytime_end,prevdaysec
   double precision photo
   real getth
+  real phim,phih
   real psim,psih
   real psimrough,psihrough
+  double precision :: psimhat, psihhat 
   real factor, factor1, factor2, factor3, printhour
   real a0, a1, a2
 
@@ -326,8 +331,10 @@ implicit none
     lsurfacelayer,&
     z0m,&
     z0h,&
-    psi_func,&     !Which psi functions? 1) standard 2) roughness layer due to canopy 3) total canopy effect
-    hrough         !Roughness sublayer height (compared to displacement height); has to be bigger than 0 for psi_func=2 to function!
+    psi_func,&     !Which psi functions? 1) standard 2) roughness layer due to canopy 3) total canopy effect : implementation of Harman - adaptable displacement height
+    hrough,&       !Roughness sublayer height (compared to displacement height); has to be bigger than 0 for psi_func=2 to function!
+    Lc,&           !Length scale of momentum absorption by the canopy (Lc = 1 / (cd a)) 
+    lgenlookup     !Switch to enable the generation of the lookup tables needed if psi_func == 3
 
   namelist/NAMRAD/ &
     lradiation,& !radiation scheme to determine Q and SW
@@ -523,11 +530,11 @@ implicit none
   close(1)
   open (1, file='namoptions')
   read (1,NAMDYN,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMDYN'
   close(1)
   open (1, file='namoptions')
   read (1,NAMRAD,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMRAD'
   close(1)
 
   pressure_ft = pressure
@@ -537,19 +544,19 @@ implicit none
 
   open (1, file='namoptions')
   read (1,NAMCHEM,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMCHEM'
   close(1)
   open (1, file='namoptions')
   read (1,NAMSURFACE,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMSURFACE'
   close(1)
   open (1, file='namoptions')
   read (1,NAMSURFLAYER,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMSURFLAYER'
   close(1)
   open (1, file='namoptions')
   read (1,NAMSOA,iostat=ierr)
-  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  if (ierr > 0) stop 'ERROR: Problem in NAMSOA'
   close(1)
 
   if ( lCO2Ags ) then
@@ -609,6 +616,13 @@ implicit none
     print *,""
   endif
 
+  if (lgenlookup .and. (psi_func == 3)) then !The lookup tables for psimhat and psihhat are generated if Harman's representation is active and lgenlookup is set to true.
+    print *,"Generating lookup tables for psimhat and psihhat"
+    call generate_psimhat(cm2)
+    call generate_psihhat(ch2)
+    print *,"done"
+    print *,""
+  endif
 
   write(formatstring,'(a,a)')'mkdir ',trim(outdir)
   call system(formatstring)
@@ -960,7 +974,7 @@ implicit none
       if(t==1) then
         thetasurf = Ts 
       else
-        if(psi_func == 2) then !Using a roughness layer like De Ridder (2010)
+        if(psi_func .ge. 2) then !Using a roughness layer like De Ridder (2010) or Harman 
           thetasurf = thetam(1) + wthetas / ((Cs/sqrt(Constm)) * ustar) !ustar is not calculated from ueff anymore: thetasurf calculation needs to be adapted so that theta(zsl) (with stability functions) remains equal to thetam(1)
         else
           thetasurf = thetam(1) + wthetas / (Cs * ueff)
@@ -969,7 +983,7 @@ implicit none
       esatsurf    = 0.611e3 * exp(17.2694 * (thetasurf - 273.16) / (thetasurf - 35.86))
       qsatsurf    = 0.622 * esatsurf / (pressure*100)
       cq          = 0.0
-      if(psi_func == 2) then !Using a roughness layer like De Ridder (2010)
+      if(psi_func .ge. 2) then !Using a roughness layer like De Ridder (2010) or  Harman  
         if(t/=1) cq = (1. + (Cs/sqrt(Constm)) * ustar * rs) ** (-1.) !ustar is not calculated from ueff anymore: qsurf calculation needs to be adapted so that q(zsl) (with stability functions) remains equal to qm(1)
       else
         if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
@@ -1051,6 +1065,65 @@ implicit none
 
           Constm2m = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimrough(2.0 / L, 2.0 / hrough)) ** 2.
           Cs2m     = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimrough(2.0 / L, 2.0 / hrough)) / (log(2.0 / z0h) - psih(2.0 / L) + psih(z0h / L) + psihrough(2.0 / L, 2.0 / hrough))
+          ueff2m   = sqrt(u2m**2 + v2m**2)
+          uws      = - Constm2m * ueff2m * u2m
+          vws      = - Constm2m * ueff2m * v2m
+          ustar    = (uws**2 + vws**2)**0.25
+
+        case(3)
+          do while(.true.)
+            iter      = iter + 1
+            L0        = L
+            fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L) + psihhatzsl) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimhatzsl) ** 2.
+            Lstart    = L - 0.001*L
+            Lend      = L + 0.001*L
+            fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart) + psihhatzsl) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart) + psimhatzsl) ** 2.) &
+                      - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend) + psihhatzsl) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend) + psimhatzsl) ** 2.) ) / (Lstart - Lend)
+            L         = L - fx / fxdif
+            L         = sign(min(abs(L),1.e6),L)!capping L
+
+            if(abs((L - L0)/L) < 1e-4) exit 
+            if(abs((L - L0)) < 1e-3) exit 
+          enddo
+
+          if(t==1) then
+            cbeta  = 0.3  !cbeta, the ratio of u* over U(canopy top) (so appareantly sqrt(constm2m)), is initialized as 0.3 (like in Harman and Finnigan (2007)), but is calculated explicitly later on, based on results from the previous time step; actually we could just use constm2m, but this way it is more in line with the paper of Harman and Finnigan
+          else
+            cbeta  = ustar / ueff2m
+          endif
+          dh       = cbeta**2 * Lc !Variable displacement height
+          Lmix     = 2 * cbeta**3 * Lc 
+
+          Scc      = 0.5 + 0.3 * tanh(2*Lc/L)
+          fhar     = 0.5 * ( sqrt( 1 + 4 * rhar * Scc ) - 1 )
+          cm1      = (1 - kappa / ( 2 * cbeta * phim(dh / Lmix) ) ) * exp(cm2/2)
+          ch1      = (1 - kappa * Scc / ( 2 * cbeta * phih(dh / Lmix) ) ) * exp(ch2/2)
+
+          psfac    = cbeta**2 * Lc/L  ! Other coordinate = z / dh
+
+          z0m      = dh * exp(-kappa       /   cbeta        ) * exp(-psim(dh/L)+psim(z0m/L)) * exp(psimhat(0,psfac,cm1))
+          z0h      = dh * exp(-kappa * Scc / ( cbeta*fhar ) ) * exp(-psih(dh/L)+psih(z0h/L)) * exp(psihhat(0,psfac,ch1))
+
+          psimhat2   = psimhat(2.0/dh,psfac,cm1)
+          psihhat2   = psihhat(2.0/dh,psfac,ch1)
+          psimhatzsl = psimhat(zsl/dh,psfac,cm1)
+          psihhatzsl = psihhat(zsl/dh,psfac,ch1)
+
+          Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimhatzsl) ** 2.
+          Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L) + psimhatzsl) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L) + psihhatzsl)
+
+          if(t==1) ustar  = sqrt(Constm) * ueff
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihhat2)
+          q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L) + psihhat2)
+          u2m    =        sqrt(Constm) * um(1) / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimhat2)
+          v2m    =        sqrt(Constm) * vm(1) / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L) + psimhat2)
+          esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
+          e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
+          rh2m   = e2m / esat2m
+
+          Constm2m = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimhat2) ** 2.
+          Cs2m     = kappa ** 2. / (log(2.0 / z0m) - psim(2.0 / L) + psim(z0m / L) + psimhat2) / (log(2.0 / z0h) - psih(2.0 / L) + psih(z0h / L) + psihhat2)
           ueff2m   = sqrt(u2m**2 + v2m**2)
           uws      = - Constm2m * ueff2m * u2m
           vws      = - Constm2m * ueff2m * v2m
@@ -1157,7 +1230,21 @@ implicit none
     else ! c_wth
       if (llandsurface) then
         if (lsurfacelayer) then
-          if((Cs2m * ueff2m) .le. 0) stop "Unrealistic division in ra calculation"
+          if((Cs2m * ueff2m) .le. 0) then 
+            print *,"t = ",t                                !HGO debug
+            print *,"psihhat(z=0) = ",psihhat(0,psfac,ch1)  !HGO debug
+            print *,"beta = ",cbeta,", displ. height = ",dh !HGO debug
+            print *,"z0m = ",z0m,", z0h = ",z0h             !HGO debug
+            print *,"L = ",L                                !HGO debug
+            print *,"psim(dh/L) = ",psim(dh/L),", psim(z0m/L) = ", psim(z0m/L)
+            print *,"psih(dh/L) = ",psih(dh/L),", psih(z0h/L) = ", psih(z0h/L)
+            print *,"Cs = ",Cs,", ueff = ",ueff             !HGO debug
+            print *,"Cs2m = ", Cs2m, ", ueff2m = ", ueff2m  !HGO debug
+            print *,"u* = ", ustar
+            print *,"exp(-kappa * Scc / ( cbeta*fhar ) ) = ", exp(-kappa * Scc / (cbeta*fhar ) )
+            print *,"Scc = ",Scc,", and fhar = ",fhar
+            stop "Unrealistic division in ra calculation"
+          endif
           ra     = 1.0 / (Cs2m * ueff2m)
         else
           if(ustar .le. 0) stop "ustar has to be greater than 0"
@@ -2224,6 +2311,32 @@ implicit none
   return
 end
 
+real function phim(zeta)
+implicit none
+  double precision zeta
+  real :: aq = 1.0, bq = 2.0/3.0, cq = 5.0, dq = 0.35
+  if(zeta <= 0) then
+    phim = (1. - 16. * real(zeta)) ** (-0.25) 
+  else
+    phim = 1+aq*zeta+bq*zeta*EXP(-dq*zeta)*(1+cq-dq*zeta)
+    !phim = 1+5*zeta
+  endif
+  return
+end
+
+real function phih(zeta)
+implicit none
+  double precision zeta
+  real :: aq = 1.0, bq = 2.0/3.0, cq = 5.0, dq = 0.35
+  if(zeta <= 0) then
+    phih = (1. - 16. * real(zeta)) ** (-0.50) 
+  else
+    phih = 1+aq*zeta*((1+2*aq*zeta/3)**0.5) + bq*zeta*EXP(-dq*zeta)*(1+cq-dq*zeta)
+    !phih = 1+5*zeta
+  endif
+  return
+end
+
 real function psim(zeta)
 implicit none
   double precision zeta
@@ -2312,3 +2425,333 @@ implicit none
     factorial = factorial * n
   enddo
 end
+
+double precision function psimhat(zin,xin,c1)
+implicit none
+  double precision                   :: zin, xin, c1      ! Input: normalized z, normalized 1/L and c1
+  integer, parameter                 :: nz = 151, nx = 41 ! Size of arrays
+  integer                            :: nfile = 73        ! File number
+  integer                            :: itz, itx, ierr
+  double precision, dimension(nz,nx) :: psigrid           ! Dimensionless arrays
+  double precision, dimension( 1,nx) :: xgrid             ! Dimensionless arrays
+  double precision, dimension(nz, 1) :: zgrid             ! Dimensionless arrays
+  double precision                   :: psifound
+  double precision                   :: wx1, wx2, wz1, wz2! Weighing functions
+  integer                            :: x1, x2, z1, z2    ! Table indices
+
+
+  !reading the table
+  open(unit=nfile,file='psimhat.dat',status='old',iostat=ierr)
+  if (ierr .ne. 0) then
+    print *,"psimhat.dat: iostat error ",ierr
+    stop "Problems in psimhat table"
+  endif
+  read(nfile,*) xgrid(1,1),(xgrid(1,itx),itx=1,nx)
+  do itz=1,nz
+    read(nfile,*) zgrid(itz,1),(psigrid(itz,itx), itx=1,nx)
+  enddo
+  close(nfile)
+
+  !find dh/L indices
+  if (xin .le. xgrid(1,1)) then
+    x1  = 1
+    x2  = 1
+    wx1 = 0.5
+    wx2 = 0.5
+  elseif (xin .ge. xgrid(1,nx)) then
+    x1  = nx
+    x2  = nx
+    wx1 = 0.5
+    wx2 = 0.5
+  else
+    x1  = 1
+    x2  = 1
+      
+    do itx = 1,nx-1
+      if ( (xin .le. xgrid(1,itx+1)) .and. (xin .gt. xgrid(1,itx)) ) then
+        x1  = itx
+        x2  = itx+1
+        wx1 = (xgrid(1,x2)-xin)/(xgrid(1,x2)-xgrid(1,x1))
+        wx2 = 1-wx1
+      endif
+    enddo
+
+  endif  
+
+  !find z/dh indices
+  if (zin .ge. zgrid(1,1)) then
+    z1  = 1
+    z2  = 1
+    wz1 = 0.5
+    wz2 = 0.5
+  elseif (zin .le. zgrid(nz,1)) then
+    z1  = nz
+    z2  = nz
+    wz1 = 0.5
+    wz2 = 0.5
+  else
+    z1  = 1
+    z2  = 1
+
+    do itz = 1,nz-1
+      if ( (zin .ge. zgrid(itz+1,1)) .and. (zin .lt. zgrid(itz,1)) ) then
+        z1  = itz
+        z2  = itz+1
+        wz1 = (zin-zgrid(z2,1))/(zgrid(z1,1)-zgrid(z2,1))
+        wz2 = 1-wz1
+      endif
+    enddo
+  endif
+
+  psifound=wx1*wz1*psigrid(z1,x1)+wx1*wz2*psigrid(z2,x1)+wx2*wz1*psigrid(z1,x2)+wx2*wz2*psigrid(z2,x2)
+
+  psimhat = c1 * psifound
+  
+end
+
+double precision function psihhat(zin,xin,c1)
+implicit none
+  double precision                   :: zin, xin, c1      ! Input: normalized z, normalized 1/L and c1
+  integer, parameter                 :: nz = 151, nx = 41 ! Size of arrays
+  integer                            :: nfile = 73        ! File number
+  integer                            :: itz, itx, ierr
+  double precision, dimension(nz,nx) :: psigrid           ! Dimensionless arrays
+  double precision, dimension( 1,nx) :: xgrid             ! Dimensionless arrays
+  double precision, dimension(nz, 1) :: zgrid             ! Dimensionless arrays
+  double precision                   :: psifound
+  double precision                   :: wx1, wx2, wz1, wz2! Weighing functions
+  integer                            :: x1, x2, z1, z2    ! Table indices
+
+
+  !reading the table
+  open(unit=nfile,file='psihhat.dat',status='old',iostat=ierr)
+  if (ierr .ne. 0) then
+    print *,"psihhat.dat: iostat error ",ierr
+    stop "Problems in psihhat table"
+  endif
+  read(nfile,*) xgrid(1,1),(xgrid(1,itx),itx=1,nx)
+  do itz=1,nz
+    read(nfile,*) zgrid(itz,1),(psigrid(itz,itx), itx=1,nx)
+  enddo
+  close(nfile)
+
+  !find dh/L indices
+  if (xin .le. xgrid(1,1)) then
+    x1  = 1
+    x2  = 1
+    wx1 = 0.5
+    wx2 = 0.5
+  elseif (xin .ge. xgrid(1,nx)) then
+    x1  = nx
+    x2  = nx
+    wx1 = 0.5
+    wx2 = 0.5
+  else
+    x1  = 1
+    x2  = 1
+      
+    do itx = 1,nx-1
+      if ( (xin .le. xgrid(1,itx+1)) .and. (xin .gt. xgrid(1,itx)) ) then
+        x1  = itx
+        x2  = itx+1
+        wx1 = (xgrid(1,x2)-xin)/(xgrid(1,x2)-xgrid(1,x1))
+        wx2 = 1-wx1
+      endif
+    enddo
+
+  endif  
+
+  !find z/dh indices
+  if (zin .ge. zgrid(1,1)) then
+    z1  = 1
+    z2  = 1
+    wz1 = 0.5
+    wz2 = 0.5
+  elseif (zin .le. zgrid(nz,1)) then
+    z1  = nz
+    z2  = nz
+    wz1 = 0.5
+    wz2 = 0.5
+  else
+    z1  = 1
+    z2  = 1
+
+    do itz = 1,nz-1
+      if ( (zin .ge. zgrid(itz+1,1)) .and. (zin .lt. zgrid(itz,1)) ) then
+        z1  = itz
+        z2  = itz+1
+        wz1 = (zin-zgrid(z2,1))/(zgrid(z1,1)-zgrid(z2,1))
+        wz2 = 1-wz1
+      endif
+    enddo
+  endif
+
+  psifound=wx1*wz1*psigrid(z1,x1)+wx1*wz2*psigrid(z2,x1)+wx2*wz1*psigrid(z1,x2)+wx2*wz2*psigrid(z2,x2)
+
+  psihhat = c1 * psifound
+  
+end
+
+subroutine generate_psimhat(c2) ! Based on code from Harman, personal communication 
+implicit none
+  double precision, intent(in)       :: c2
+  integer                            :: nfile = 71         ! File number
+  integer, parameter                 :: nz = 151, nx = 41  ! Size of arrays
+  integer                            :: itz, itx           ! Indices to build the arrays
+  double precision, dimension(nz,nx) :: zref, xx, AA       ! Dimensionless input arrays (2x) and the output array
+
+  !Generating the dimensionless coordinates
+  do itz=1,nz
+    zref(itz,:) = (15.0-0.1*(itz-1))
+  end do
+
+  do itx=1,nx                      ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+    xx(:,itx)   = (itx-21)/2.0     ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+  end do                           ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+
+  xx(1,:)= (/ -25.0,-20.0,-15.0,-10.0,-7.5,-5.0,-2.5,-1.0, &
+              -0.75,-0.5,-0.25,-0.1,-0.075,-0.05,-0.025,-0.01,-0.0075,-0.005,-0.0025,-0.001,&
+               0.0,0.001,0.0025,0.005,0.0075,0.01,0.025,0.05,0.075,0.1,0.25,0.5,0.75,1.0,2.5,&
+               5.0,7.5,10.0,15.0,20.0,25.0 /)
+  xx(1,:)=0.1*xx(1,:)
+  do itz=2,nz
+    xx(itz,:)=xx(1,:)
+  enddo
+
+  AA = 0.0
+
+  open(unit=nfile,file='psimhat.dat')
+  300 format(42e13.5)
+  write(nfile,300) 0.0, (xx(1,itx),itx=1,nx)
+
+  do itz = 1,nz
+    do itx = 1,nx
+      call get_psimhat(zref(itz,itx),xx(itz,itx),c2,AA(itz,itx)) 
+    end do
+    write(nfile,300) zref(itz,1),(AA(itz,itx), itx=1,nx) 
+  end do
+
+  close(nfile)
+
+  return
+end subroutine generate_psimhat
+
+subroutine get_psimhat(zref,xx,c2,AA) ! Based on code from Harman, personal communication
+implicit none
+  double precision, intent( in) :: zref, xx, c2
+  double precision, intent(out) :: AA
+  double precision              :: zz1,zz2,ff1,ff2,dz=0.01,ddz
+  integer                       :: JJ, nsteps
+  real                          :: phim,phih  !declaration of functions
+
+  if (zref .le. -1.0) then
+    stop "problem in get_psimhat: z is less than -dh"
+  endif
+
+  AA  = 0.0
+
+  zz1 = 50.0
+  ff1 = phim(zz1*xx) * exp(-c2*zz1/2.0) / zz1
+
+  nsteps = floor((zz1-zref-1)/dz)
+  do JJ=1,nsteps
+    if (zz1-dz .gt. zref+1.0) then
+      zz2 = zz1 - dz
+      ff2 = phim(zz2*xx) * exp(-c2*zz2/2.0) / zz2
+      AA  = AA + 0.5 * dz * (ff1 + ff2)  !Taylor's approximation to integrate
+     
+      zz1 = zz2
+      ff1 = ff2
+    else
+      continue
+    endif
+  end do
+
+  ddz = zz1 - (zref+1.0)
+  ff2 = phim((zref+1.0)*xx) * exp(-c2*(zref+1.0)/2.0) / (zref+1.0)
+  AA  = AA + 0.5 * ddz * (ff1 + ff2)
+
+  return
+end subroutine get_psimhat
+
+subroutine generate_psihhat(c2)
+implicit none
+  double precision, intent(in)       :: c2
+  integer                            :: nfile = 72         ! File number
+  integer, parameter                 :: nz = 151, nx = 41  ! Size of arrays
+  integer                            :: itz, itx           ! Indices to build the arrays
+  double precision, dimension(nz,nx) :: zref, xx, AA       ! Dimensionless input arrays (2x) and the output array
+
+  !Generating the dimensionless coordinates
+  do itz=1,nz
+    zref(itz,:) = (15.0-0.1*(itz-1))
+  end do
+
+  do itx=1,nx                      ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+    xx(:,itx)   = (itx-21)/2.0     ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+  end do                           ! Don't think this code is necessary; it's likely to be overwritten by the next lines, but I'll leave it
+
+  xx(1,:)= (/ -25.0,-20.0,-15.0,-10.0,-7.5,-5.0,-2.5,-1.0, &
+              -0.75,-0.5,-0.25,-0.1,-0.075,-0.05,-0.025,-0.01,-0.0075,-0.005,-0.0025,-0.001,&
+               0.0,0.001,0.0025,0.005,0.0075,0.01,0.025,0.05,0.075,0.1,0.25,0.5,0.75,1.0,2.5,&
+               5.0,7.5,10.0,15.0,20.0,25.0 /)
+  xx(1,:)=0.1*xx(1,:)
+  do itz=2,nz
+    xx(itz,:)=xx(1,:)
+  enddo
+
+  AA = 0.0
+
+  open(unit=nfile,file='psihhat.dat')
+  300 format(42e13.5)
+  write(nfile,300) 0.0, (xx(1,itx),itx=1,nx)
+
+  do itz = 1,nz
+    do itx = 1,nx
+      call get_psihhat(zref(itz,itx),xx(itz,itx),c2,AA(itz,itx)) 
+    end do
+    write(nfile,300) zref(itz,1),(AA(itz,itx), itx=1,nx) 
+  end do
+
+  close(nfile)
+
+  return
+end subroutine generate_psihhat
+
+subroutine get_psihhat(zref,xx,c2,AA) ! Based on code from Harman, personal communication
+implicit none
+  double precision, intent( in) :: zref, xx, c2
+  double precision, intent(out) :: AA
+  double precision              :: zz1,zz2,ff1,ff2,dz=0.01,ddz
+  integer                       :: JJ, nsteps
+  real                          :: phim,phih  !declaration of functions
+
+  if (zref .le. -1.0) then
+    stop "problem in get_psihhat: z is less than -dh"
+  endif
+
+  AA  = 0.0
+
+  zz1 = 50.0
+  ff1 = phih(zz1*xx) * exp(-c2*zz1/2.0) / zz1
+
+  nsteps = floor((zz1-zref-1)/dz)
+  do JJ=1,nsteps
+    if (zz1-dz .gt. zref+1.0) then
+      zz2 = zz1 - dz
+      ff2 = phih(zz2*xx) * exp(-c2*zz2/2.0) / zz2
+      AA  = AA + 0.5 * dz * (ff1 + ff2)  !Taylor's approximation to integrate
+     
+      zz1 = zz2
+      ff1 = ff2
+    else
+      continue
+    endif
+  end do
+
+  ddz = zz1 - (zref+1.0)
+  ff2 = phih((zref+1.0)*xx) * exp(-c2*(zref+1.0)/2.0) / (zref+1.0)
+  AA  = AA + 0.5 * ddz * (ff1 + ff2)
+
+  return
+end subroutine get_psihhat
