@@ -1096,8 +1096,8 @@ implicit none
 
           Scc      = 0.5 + 0.3 * tanh(2*Lc/L)
           fhar     = 0.5 * ( sqrt( 1 + 4 * rhar * Scc ) - 1 )
-          cm1      = (1 - kappa / ( 2 * cbeta * phim(dh / Lmix) ) ) * exp(cm2/2)
-          ch1      = (1 - kappa * Scc / ( 2 * cbeta * phih(dh / Lmix) ) ) * exp(ch2/2)
+          cm1      = (1 - kappa / ( 2 * cbeta * phim(dh / L) ) ) * exp(cm2/2)
+          ch1      = (1 - kappa * Scc / ( 2 * cbeta * phih(dh / L) ) ) * exp(ch2/2)
 
           psfac    = cbeta**2 * Lc/L  ! Other coordinate = z / dh
 
