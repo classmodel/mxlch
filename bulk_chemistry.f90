@@ -134,7 +134,8 @@ implicit none
   double precision :: cc=0.0,Qtot=400.0,albedo=0.2 !cloud cover and incoming energy,albedo, incoming radiation
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
-  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m, qsat2m, cbeta, dh, Lmix
+  double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m, qsat2m, dh, Lmix
+  double precision :: cbeta  = 0.3  !cbeta, the ratio of u* over U(canopy top) (so appareantly sqrt(constm2m)), is set to 0.3 (like in Harman and Finnigan (2007)). Calculating it explicitly yields strange results. Possible alternative: use equations of Harman (2012) to parameterize cbeta
   double precision :: cm1, cm2 = 0.5, ch1, ch2 = 0.5, Scc, fhar, rhar = 0.1
   double precision :: psimhat2, psihhat2, psimhatzsl = 0.0, psihhatzsl = 0.0
   double precision :: Tr,Ta,costh !Needed for radiation calculation
@@ -334,7 +335,8 @@ implicit none
     psi_func,&     !Which psi functions? 1) standard 2) roughness layer due to canopy 3) total canopy effect : implementation of Harman - adaptable displacement height
     hrough,&       !Roughness sublayer height (compared to displacement height); has to be bigger than 0 for psi_func=2 to function!
     Lc,&           !Length scale of momentum absorption by the canopy (Lc = 1 / (cd a)) 
-    lgenlookup     !Switch to enable the generation of the lookup tables needed if psi_func == 3
+    lgenlookup,&   !Switch to enable the generation of the lookup tables needed if psi_func == 3
+    cbeta          !Prescribed ratio of u* over U(canopy top) 
 
   namelist/NAMRAD/ &
     lradiation,& !radiation scheme to determine Q and SW
@@ -1086,11 +1088,6 @@ implicit none
             if(abs((L - L0)) < 1e-3) exit 
           enddo
 
-          if(t==1) then
-            cbeta  = 0.3  !cbeta, the ratio of u* over U(canopy top) (so appareantly sqrt(constm2m)), is initialized as 0.3 (like in Harman and Finnigan (2007)), but is calculated explicitly later on, based on results from the previous time step; actually we could just use constm2m, but this way it is more in line with the paper of Harman and Finnigan
-          else
-            cbeta  = ustar / ueff2m
-          endif
           dh       = cbeta**2 * Lc !Variable displacement height
           Lmix     = 2 * cbeta**3 * Lc 
 
