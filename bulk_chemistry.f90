@@ -1228,18 +1228,6 @@ implicit none
       if (llandsurface) then
         if (lsurfacelayer) then
           if((Cs2m * ueff2m) .le. 0) then 
-            print *,"t = ",t                                !HGO debug
-            print *,"psihhat(z=0) = ",psihhat(0,psfac,ch1)  !HGO debug
-            print *,"beta = ",cbeta,", displ. height = ",dh !HGO debug
-            print *,"z0m = ",z0m,", z0h = ",z0h             !HGO debug
-            print *,"L = ",L                                !HGO debug
-            print *,"psim(dh/L) = ",psim(dh/L),", psim(z0m/L) = ", psim(z0m/L)
-            print *,"psih(dh/L) = ",psih(dh/L),", psih(z0h/L) = ", psih(z0h/L)
-            print *,"Cs = ",Cs,", ueff = ",ueff             !HGO debug
-            print *,"Cs2m = ", Cs2m, ", ueff2m = ", ueff2m  !HGO debug
-            print *,"u* = ", ustar
-            print *,"exp(-kappa * Scc / ( cbeta*fhar ) ) = ", exp(-kappa * Scc / (cbeta*fhar ) )
-            print *,"Scc = ",Scc,", and fhar = ",fhar
             stop "Unrealistic division in ra calculation"
           endif
           ra     = 1.0 / (Cs2m * ueff2m)
