@@ -1406,7 +1406,7 @@ implicit none
     vm(2)=vm(1)+(f*(du(1))+(1/(zi(1)+inf))*(vws-vwe))*dtime
 
 !   closure assumption
-    wthetae= - beta *wthetav
+    wthetae= - we * dtheta(1)
 
     if (wqs.ne.0.) then
         betaq = -wqe/wqs
