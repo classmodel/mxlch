@@ -552,6 +552,7 @@ implicit none
     lrsAgs       = .true.
     llandsurface = .true.
   endif
+  if ( .not. lchem ) lvbs = .false.
   if ( lrsAgs .and. (.not. llandsurface) ) then
     print *,""
     print *,""
