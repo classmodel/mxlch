@@ -1127,7 +1127,7 @@ implicit none
                      exp(0.3 * (T1Am - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2Am))))
 
           ! calculate effect of soil moisture stress on gross assimilation rate
-          betaw    = max(1.0e-3,min(1.0,(wg - wwilt)/(wfc - wwilt)))
+          betaw    = max(1.0e-3,min(1.0,(w2 - wwilt)/(wfc - wwilt)))
 
           ! calculate stress function
           fstr     = betaw
@@ -1162,7 +1162,7 @@ implicit none
           An       = -(co2abs - ci) / (ra + rsCO2)
 
           ! CO2 soil respiration surface flux
-          fw       = Cw * wsmax / (wg + wsmin)
+          fw       = Cw * wsmax / (w2 + wsmin)
 !          Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil
           Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
 
