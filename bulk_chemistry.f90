@@ -92,7 +92,7 @@ implicit none
 ! declaration
 !   dynamics
 
-  logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., lencroachment=.false., ladvecFT=.false., lgamma=.false., lenhancedentrainment=.false., lfixedlapserates=.false. !c_fluxes replaces c_wth
+  logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., lencroachment=.false., ladvecFT=.false., lgamma=.false., lenhancedentrainment=.false., lfixedlapserates=.false., lfixedtroposphere=.false. !c_fluxes replaces c_wth
   logical :: lradiation=.false.,lsurfacelayer=.false.,llandsurface=.false.,lrsAgs=.false., lCO2Ags=.false.
   double precision :: zi(2),zi0 = 200 ,thetam(2), dtheta(2),pressure = 1013.0, wthetae
   double precision temp_cbl, temp_ft
@@ -123,7 +123,7 @@ implicit none
   double precision :: um(2), vm(2), um0 = 0.0 , vm0 = 0.0, ueff, wstar
   double precision :: ug = 0.0 , vg = 0.0
   double precision du(2), dv(2)
-  double precision :: ws,wsls=0.0
+  double precision :: ws,wsls=0.0, wsubs = 0.0 !wsubs = subsiding motions (subsidence + convective mass flux compensation) affecting inversions through the lapse rates
   double precision uwe,vwe
   double precision :: f,gammau = 0.0 , gammav = 0.0
   double precision we
@@ -155,7 +155,7 @@ implicit none
   double precision :: factorial
   double precision :: Cw = 1.6e-3,wsmax=0.55,wsmin=0.005,R10=0.23,Eact0=53.3e3
   double precision :: betac,wcs,gammac = 0.0,cm0 = 0.0,dc0 = 0.0
- 
+
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
@@ -212,7 +212,7 @@ implicit none
   
   !constants
 !  double precision,parameter :: rvrd = 461.5/287.04  !  Rv/Rd
-  real,parameter :: rvrd = 0.61  !  Rd/Rv    
+  real,parameter :: rvrd = 0.61     !Rd/Rv    
   real,parameter :: bolz =  5.67e-8 !Stefan-Boltzmann constant [-]
   real,parameter :: rhow =  1000.   !density of water [kg m-3]
   real,parameter :: rho  =    1.2   !density of air [kg m-3]
@@ -284,6 +284,7 @@ implicit none
     lenhancedentrainment, &
     wsls, &
     lfixedlapserates, &
+    lfixedtroposphere, &
     wthetasmax, &
     c_wth, &
     c_fluxes, &
@@ -548,6 +549,7 @@ implicit none
   if (ierr > 0) stop 'ERROR: Problem in namoptions'
   close(1)
 
+  if (lfixedtroposphere) lfixedlapserates = .true.
   if ( lCO2Ags ) then
     lrsAgs       = .true.
     llandsurface = .true.
@@ -1503,10 +1505,12 @@ implicit none
       if (lenhancedentrainment) then
         we = we + 5. * (ustar**3.) * thetav / (g * zi(1) * dthetav)
       endif
+
+      if (lfixedtroposphere) wsubs = ws - wm
       
       zi(2)  =zi(1)+(we+ws-wm)*dtime            !eq (8)
       hcrit    = hcrit + ws * dtime
-      dtheta(2)=dtheta(1)+ ((gamma*(we-wm))- &
+      dtheta(2)=dtheta(1)+ ((gamma*(we + wsubs))- &                   !extra subsidence by wm only affects dtheta (through gamma) if fixed tropospheric profiles are considered
               (1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime           !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
       thetam(2)=thetam(1)+ &
@@ -1535,7 +1539,7 @@ implicit none
 ! ---- Specific humidity
     if (beta /= 0) then
         wqe = -we*dq(1)
-        dq(2)=dq(1)+ ((gammaq*(we-wm))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
+        dq(2)=dq(1)+ ((gammaq*(we + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
         if (.not. ladvecFT) dq(2) = dq(2) - lsq*dtime
     else
         wqe  = 0.
@@ -1547,7 +1551,7 @@ implicit none
 
     if (beta /= 0) then
       wce = -we*dc(1)
-      dc(2)=dc(1)+ ((gammac*we)-(1/(zi(1)+inf))*(wcs - wce))* dtime   !eq. (3)
+      dc(2)=dc(1)+ ((gammac*(we + wsubs))-(1/(zi(1)+inf))*(wcs - wce))* dtime   !eq. (3)
     else
       wce    = 0.
       dc(2)  =0.
@@ -1560,8 +1564,8 @@ implicit none
     if (beta /= 0) then
       uwe = -we*du(1)
       vwe = -we*dv(1)
-      du(2)=du(1)+ ((gammau*we)-(1/(zi(1)+inf))*(uws - uwe)+ f*dv(1))* dtime                 !eq. (3)
-      dv(2)=dv(1)+ ((gammav*we)-(1/(zi(1)+inf))*(vws - vwe) - f*du(1))*dtime                 !eq. (3)
+      du(2)=du(1)+ ((gammau*(we + wsubs))-(1/(zi(1)+inf))*(uws - uwe)+ f*dv(1))* dtime                 !eq. (3)
+      dv(2)=dv(1)+ ((gammav*(we + wsubs))-(1/(zi(1)+inf))*(vws - vwe) - f*du(1))*dtime                 !eq. (3)
     else
       uwe = 0.
       vwe = 0.
