@@ -1183,7 +1183,7 @@ implicit none
         if (w2 .gt. wwilt) then
           f2   = (wfc - wwilt) / (w2 - wwilt)
         endif
-        f2     = min(1.e8, f2)
+        f2     = max(1.0,min(1.e8, f2))
 
         if (lsurfacelayer) then
           f3   = 1.0 / exp( - gD * (esat2m - e2m)/100.0 )
@@ -1276,7 +1276,7 @@ implicit none
         if (wg .gt. wwilt) then
           f2   = (wfc - wwilt) / (wg - wwilt)
         endif
-        f2     = min(1.e8, f2)
+        f2     = max(1.0,min(1.e8, f2))
 
         rssoil = rssoilmin * f2
 
