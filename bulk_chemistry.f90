@@ -1079,6 +1079,9 @@ implicit none
       enddo
     else ! c_wth
       if (llandsurface) then
+        if(ustar .le. 0) stop "ustar has to be greater than 0"
+        ra       = ueff / (ustar ** 2.)
+
         if (lsea) then ! Sea surface
           esatsurf     = 0.611e3 * exp(17.2694 * (sst - 273.16) / (sst - 35.86))
           qsatsurf     = 0.622 * esatsurf / (pressure*100)
@@ -1086,9 +1089,6 @@ implicit none
           LE           = rho * Lv / ra * (qsatsurf - qm(1) * 1.0e-03)
           SH           = rho * Cp / ra * (sst      - thetam(1))
         else           ! Land surface
-          if(ustar .le. 0) stop "ustar has to be greater than 0"
-          ra       = ueff / (ustar ** 2.)
-
           esat     = 0.611e3 * exp(17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86))
           qsat     = 0.622 * esat / (pressure*100)
           desatdT  = esat * (17.2694 / (thetam(1) - 35.86) - 17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86)**2.)
