@@ -127,9 +127,12 @@ implicit none
   double precision uwe,vwe
   double precision :: f,gammau = 0.0 , gammav = 0.0
   double precision we
-  double precision :: advq = 0.0 ,lsq   ! large scale advection moisture (units (g/Kg)/s)!
-  double precision :: advtheta = 0.0 ,lstheta   ! large scale advection heat (units K/s)!
-  double precision :: cc=0.0,Qtot=400.0,albedo=0.2 !cloud cover and incoming energy,albedo, incoming radiation
+  double precision :: advq = 0.0 ,lsq              ! large scale advection moisture (units (g/Kg)/s)!
+  double precision :: advtheta = 0.0 ,lstheta      ! large scale advection heat (units K/s)!
+  double precision :: cc=0.0,Qtot=400.0,albedo=0.2 ! cloud cover and incoming energy,albedo, incoming radiation
+  double precision :: DeltaF = 0.0, Rdistr = 1.0   ! Radiative gradient due to aerosols and clouds (neg. = absorption, pos. = emission): amount (W/m2) and distribution (1 = top, 0 = over entire mixed layer)
+  double precision :: DeltaFsw=0.0, DeltaFlw=0.0   ! Shortwave component (e.g. aerosols) and longwave component (e.g. clouds)
+  double precision :: wf                           ! Resulting boundary-layer development (following the lapse rate)
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
   double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m
@@ -328,9 +331,12 @@ implicit none
 
   namelist/NAMRAD/ &
     lradiation,& !radiation scheme to determine Q and SW
-    cc,&   !cloud cover
-    S0,&   !Incoming radiation
-    albedo !Surface albedo
+    cc,&         !cloud cover
+    S0,&         !Incoming radiation
+    DeltaFsw,&   !Absorbed radiation by e.g. aerosols (neg. value)
+    DeltaFlw,&   !Emitted radiation by e.g. clouds (pos. value)
+    Rdistr,&     !Distribution of absorbing aerosols (see Barbaro et al., 2013)
+    albedo       !Surface albedo
 
   namelist/NAMSURFACE/ &
     llandsurface,& !switch to use interactive landsurface
@@ -735,6 +741,8 @@ implicit none
   cm(1) = cm0
   dc(1) = dc0
 
+  DeltaF = DeltaFsw + DeltaFlw
+
   aver1=atime/dtime
   aver2=atime_vert/dtime
 
@@ -942,7 +950,7 @@ implicit none
       Ta    = thetam(1)*((((100*pressure)-zsl*rho*g)/(100*pressure))**(Rd/Cp))!pressure*100 to compensate for SI, 0.1 to get T at top of the SL
       Tr    = (0.6 + 0.2 * costh) * (1 - 0.4 * cc)
 
-      Swin  = S0 * Tr * costh
+      Swin  = S0 * Tr * costh + DeltaFsw
       Swout = albedo * Swin
       Lwin  = 0.8 * bolz * (Ta ** 4)
       Lwout = bolz * (Ts ** 4)
@@ -1505,16 +1513,18 @@ implicit none
       if (lenhancedentrainment) then
         we = we + 5. * (ustar**3.) * thetav / (g * zi(1) * dthetav)
       endif
+      wf = Rdistr * DeltaF / ( rho * Cp * dtheta(1) )
+!      we = we + wf  ! Aerosol absorption basically undoes part of we
 
       if (lfixedtroposphere) wsubs = ws - wm
       
-      zi(2)  =zi(1)+(we+ws-wm)*dtime            !eq (8)
+      zi(2)  =zi(1)+(we+wf+ws-wm)*dtime            !eq (8)
       hcrit    = hcrit + ws * dtime
-      dtheta(2)=dtheta(1)+ ((gamma*(we + wsubs))- &                   !extra subsidence by wm only affects dtheta (through gamma) if fixed tropospheric profiles are considered
-              (1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime           !eq. (3)
+      dtheta(2)=dtheta(1)+ ((gamma*(we + wf + wsubs))- &                            !extra subsidence by wm only affects dtheta (through gamma) if fixed tropospheric profiles are considered
+              (1/(zi(1)+inf))*(wthetas+(we+wf)*dtheta(1) - DeltaF/(rho*Cp) ))*dtime !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
       thetam(2)=thetam(1)+ &
-            ((1/(zi(1)+inf))*(wthetas+we*dtheta(1)))*dtime + &        !eq  (1)
+            ((1/(zi(1)+inf))*(wthetas+(we+wf)*dtheta(1) - DeltaF/(rho*Cp) ))*dtime + &        !eq  (1)
             lstheta*dtime
     else
 !     Calculation boundary layer height.
@@ -1538,8 +1548,8 @@ implicit none
 
 ! ---- Specific humidity
     if (beta /= 0) then
-        wqe = -we*dq(1)
-        dq(2)=dq(1)+ ((gammaq*(we + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
+        wqe = -(we+wf)*dq(1)
+        dq(2)=dq(1)+ ((gammaq*(we + wf + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
         if (.not. ladvecFT) dq(2) = dq(2) - lsq*dtime
     else
         wqe  = 0.
@@ -1550,8 +1560,8 @@ implicit none
 ! -----------Carbon Dioxide
 
     if (beta /= 0) then
-      wce = -we*dc(1)
-      dc(2)=dc(1)+ ((gammac*(we + wsubs))-(1/(zi(1)+inf))*(wcs - wce))* dtime   !eq. (3)
+      wce = -(we+wf)*dc(1)
+      dc(2)=dc(1)+ ((gammac*(we + wf + wsubs))-(1/(zi(1)+inf))*(wcs - wce))* dtime   !eq. (3)
     else
       wce    = 0.
       dc(2)  =0.
@@ -1562,10 +1572,10 @@ implicit none
 ! ---- Windspeed
 
     if (beta /= 0) then
-      uwe = -we*du(1)
-      vwe = -we*dv(1)
-      du(2)=du(1)+ ((gammau*(we + wsubs))-(1/(zi(1)+inf))*(uws - uwe)+ f*dv(1))* dtime                 !eq. (3)
-      dv(2)=dv(1)+ ((gammav*(we + wsubs))-(1/(zi(1)+inf))*(vws - vwe) - f*du(1))*dtime                 !eq. (3)
+      uwe = -(we+wf)*du(1)
+      vwe = -(we+wf)*dv(1)
+      du(2)=du(1)+ ((gammau*(we + wf + wsubs))-(1/(zi(1)+inf))*(uws - uwe)+ f*dv(1))* dtime                 !eq. (3)
+      dv(2)=dv(1)+ ((gammav*(we + wf + wsubs))-(1/(zi(1)+inf))*(vws - vwe) - f*du(1))*dtime                 !eq. (3)
     else
       uwe = 0.
       vwe = 0.
@@ -1577,7 +1587,7 @@ implicit none
     vm(2)=vm(1)+(f*(du(1))+(1/(zi(1)+inf))*(vws-vwe))*dtime
 
 !   closure assumption
-    wthetae= - we * dtheta(1)
+    wthetae= - (we+wf) * dtheta(1)
 
     if (wqs.ne.0.) then
         betaq = -wqe/wqs
@@ -1733,7 +1743,7 @@ implicit none
 
     if(lchem) then
       do k=1, nchsp
-        E(k)=-we*(c_ft(k)-c_cbl(k))
+        E(k)=-(we+wf)*(c_ft(k)-c_cbl(k))
         c_cbl(k)=c_cbl(k)+(1/zi(1))*(Q_cbl(k)-E(k))*dtime
         c_cbl(k)=c_cbl(k)+adv_chem_cbl(k)*dtime
         c_ft( k)=c_ft( k)+adv_chem_ft(k )*dtime
