@@ -159,6 +159,9 @@ implicit none
   double precision :: Cw = 1.6e-3,wsmax=0.55,wsmin=0.005,R10=0.23,Eact0=53.3e3
   double precision :: betac,wcs,gammac = 0.0,cm0 = 0.0,dc0 = 0.0
 
+  logical          :: lsea=.false.  ! sea surface fluxes switch
+  double precision :: sst=285.0     ! sea surface temperature
+
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
@@ -341,6 +344,8 @@ implicit none
   namelist/NAMSURFACE/ &
     llandsurface,& !switch to use interactive landsurface
     Qtot,&         !Incoming energy
+    lsea,&         !Using a sea surface instead of land
+    sst,&          !Sea surface temperature
     Ts,&           !Initial surface temperature [K]
     wwilt,&        !wilting point
     w2,&           !Volumetric water content deeper soil layer
@@ -973,6 +978,7 @@ implicit none
       qsatsurf    = 0.622 * esatsurf / (pressure*100)
       cq          = 0.0
       if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
+      if(lsea) cq = 1.0
       qsurf       = (1. - cq) * qm(1) + cq * qsatsurf * 1.e3 !HGO factor for qsatsurf which is in kg/kg
 
       thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
@@ -1073,157 +1079,166 @@ implicit none
       enddo
     else ! c_wth
       if (llandsurface) then
-        if(ustar .le. 0) stop "ustar has to be greater than 0"
-        ra       = ueff / (ustar ** 2.)
+        if (lsea) then ! Sea surface
+          esatsurf     = 0.611e3 * exp(17.2694 * (sst - 273.16) / (sst - 35.86))
+          qsatsurf     = 0.622 * esatsurf / (pressure*100)
 
-        esat     = 0.611e3 * exp(17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86))
-        qsat     = 0.622 * esat / (pressure*100)
-        desatdT  = esat * (17.2694 / (thetam(1) - 35.86) - 17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86)**2.)
-        dqsatdT  = 0.622 * desatdT / (pressure*100)
-        efinal   = qm(1) * 1.0e-3 * (pressure*100) / 0.622 
+          LE           = rho * Lv / ra * (qsatsurf - qm(1) * 1.0e-03)
+          SH           = rho * Cp / ra * (sst      - thetam(1))
+        else           ! Land surface
+          if(ustar .le. 0) stop "ustar has to be greater than 0"
+          ra       = ueff / (ustar ** 2.)
 
-        if (lradiation) then
-                f1 = 1.0 / ((0.004 * Swin + 0.05) / (0.81 * (0.004 * Swin + 1.)))
-        else
-                f1 = 1.0
-        endif
+          esat     = 0.611e3 * exp(17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86))
+          qsat     = 0.622 * esat / (pressure*100)
+          desatdT  = esat * (17.2694 / (thetam(1) - 35.86) - 17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86)**2.)
+          dqsatdT  = 0.622 * desatdT / (pressure*100)
+          efinal   = qm(1) * 1.0e-3 * (pressure*100) / 0.622 
 
-        f2     = 1.e8
-        if (w2 .gt. wwilt) then
-          f2   = (wfc - wwilt) / (w2 - wwilt)
-        endif
-        f2     = max(1.0,min(1.e8, f2))
-
-        if (lsurfacelayer) then
-          f3   = 1.0 / exp( - gD * (esat2m - e2m)/100.0 )
-          f4   = 1.0 / (1.0 - 0.0016 * (298.0 - T2m) ** 2.)
-        else !Then just use BL-averaged values instead of 2 m values
-          f3   = 1.0 / exp( - gD * (esat - efinal)/100.0)
-          f4   = 1.0 / (1.0 - 0.0016 * (298.0 - thetam(1)) ** 2.)
-        endif
-
-        rs     = (rsmin / LAI) * f1 * f2 * f3 * f4 
-
-        if (lrsAgs) then
-          if(lchem .and. (CO2%loc .gt. 0) ) then
-            CO2ags = c_cbl(CO2%loc) / 1000.0 !CO2ags in ppm
+          if (lradiation) then
+                  f1 = 1.0 / ((0.004 * Swin + 0.05) / (0.81 * (0.004 * Swin + 1.)))
           else
-            CO2ags = cm(1) / 1000.0 !CO2ags in ppm
+                  f1 = 1.0
           endif
 
-          ! calculate surface resistances using plant physiological (A-gs) model
-          ! calculate CO2 compensation concentration
-          CO2comp  = CO2comp298 * Q10CO2 ** ( 0.1 * (thetasurf - 298.0) )
-          CO2comp  = CO2comp * rho
+          f2     = 1.e8
+          if (w2 .gt. wwilt) then
+            f2   = (wfc - wwilt) / (w2 - wwilt)
+          endif
+          f2     = max(1.0,min(1.e8, f2))
 
-          ! calculate mesophyll conductance
-          gm       = gm298 * Q10gm ** (0.1 * (thetasurf - 298.0) ) / ( (1. + exp(0.3 * (T1gm - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2gm))))
-          gm       = gm / 1000   ! conversion from mm s-1 to m s-1
+          if (lsurfacelayer) then
+            f3   = 1.0 / exp( - gD * (esat2m - e2m)/100.0 )
+            f4   = 1.0 / (1.0 - 0.0016 * (298.0 - T2m) ** 2.)
+          else !Then just use BL-averaged values instead of 2 m values
+            f3   = 1.0 / exp( - gD * (esat - efinal)/100.0)
+            f4   = 1.0 / (1.0 - 0.0016 * (298.0 - thetam(1)) ** 2.)
+          endif
 
-          ! calculate CO2 concentration inside the leaf (ci)
-          fmin0    = gmin/nuco2q - (1.0/9.0) * gm
-          fmin     = (-fmin0 + ( fmin0 ** 2.0 + 4 * gmin/nuco2q * gm ) ** (0.5)) / (2. * gm)
+          rs     = (rsmin / LAI) * f1 * f2 * f3 * f4 
 
+          if (lrsAgs) then
+            if(lchem .and. (CO2%loc .gt. 0) ) then
+              CO2ags = c_cbl(CO2%loc) / 1000.0 !CO2ags in ppm
+            else
+              CO2ags = cm(1) / 1000.0 !CO2ags in ppm
+            endif
+
+            ! calculate surface resistances using plant physiological (A-gs) model
+            ! calculate CO2 compensation concentration
+            CO2comp  = CO2comp298 * Q10CO2 ** ( 0.1 * (thetasurf - 298.0) )
+            CO2comp  = CO2comp * rho
+
+            ! calculate mesophyll conductance
+            gm       = gm298 * Q10gm ** (0.1 * (thetasurf - 298.0) ) / ( (1. + exp(0.3 * (T1gm - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2gm))))
+            gm       = gm / 1000   ! conversion from mm s-1 to m s-1
+
+            ! calculate CO2 concentration inside the leaf (ci)
+            fmin0    = gmin/nuco2q - (1.0/9.0) * gm
+            fmin     = (-fmin0 + ( fmin0 ** 2.0 + 4 * gmin/nuco2q * gm ) ** (0.5)) / (2. * gm)
+
+            esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
+            Ds       = (esatsurf - efinal) / 1000.0 ! in kPa
+            D0       = (f0 - fmin) / ad
+
+            cfrac    = f0 * (1.0 - Ds/D0) + fmin * (Ds/D0)
+            co2abs   = CO2ags*(MW_CO2/MW_Air)*rho
+            ci       = cfrac * (co2abs - CO2comp) + CO2comp
+
+            ! calculate maximal gross primary production in high light conditions (Ag)
+            Ammax    = Ammax298 * Q10Am ** ( 0.1 * (thetasurf - 298.0) ) / ( (1. + &
+                       exp(0.3 * (T1Am - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2Am))))
+
+            ! calculate effect of soil moisture stress on gross assimilation rate
+            betaw    = max(1.0e-3,min(1.0,(w2 - wwilt)/(wfc - wwilt)))
+
+            ! calculate stress function
+            fstr     = betaw
+
+            ! calculate gross assimilation rate (Am)
+            Am       = Ammax * (1 - exp( -(gm * (ci - CO2comp) / Ammax) ) )
+
+            Rdark    = (1.0/9) * Am
+
+            PAR      = 0.40*max(0.1,Swin*cveg)
+            ! calculate  light use efficiency
+            alphac   = alpha0 * (co2abs - CO2comp) / (co2abs + 2 * CO2comp)
+
+            ! 1.- calculate upscaling from leaf to canopy: net flow CO2 into the plant (An) 
+            tempy    = alphac * Kx * PAR / (Am + Rdark)
+            An       = (Am + Rdark) * (1 - 1.0 / (Kx * LAI) * (E1( tempy * exp(-Kx * LAI)) - E1(tempy)))
+
+
+            ! 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
+            AGSa1    = 1.0 / (1 - f0)
+            Dstar    = D0 / (AGSa1 * (f0-fmin))
+
+            gcco2    = LAI * (gmin/nuco2q + AGSa1 * fstr * An / ((co2abs - CO2comp) * (1 + Ds / Dstar)))
+
+            ! calculate surface resistance for moisture and carbon dioxide
+            rsAgs    = 1.0 / (1.6 * gcco2)
+            rsCO2    = 1.0 / gcco2
+
+            rs       = rsAgs
+
+            ! calculate net flux of CO2 into the plant (An)
+            An       = -(co2abs - ci) / (ra + rsCO2)
+
+            ! CO2 soil respiration surface flux
+            fw       = Cw * wsmax / (w2 + wsmin)
+!            Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil
+            Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
+
+            wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0/rho) !in ppm m/s
+
+          endif
+
+          ! recompute f2 using wg instead of w2
+          f2     = 1.e8
+          if (wg .gt. wwilt) then
+            f2   = (wfc - wwilt) / (wg - wwilt)
+          endif
+          f2     = max(1.0,min(1.e8, f2))
+
+          rssoil = rssoilmin * f2
+
+          Wlmx   = LAI * Wmax
+          cliq   = min(1.0, Wl / Wlmx)
+
+          Ts     = (Qtot + rho * Cp / ra * thetam(1) + cveg * (1.0-cliq) * rho &
+                 * Lv / (ra + rs) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
+                 + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
+                 + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) + Lambda * Tsoil) &
+                 * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
+                 * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
+                 
           esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
-          Ds       = (esatsurf - efinal) / 1000.0 ! in kPa
-          D0       = (f0 - fmin) / ad
+          qsatsurf = 0.622 * esatsurf / (pressure*100)
 
-          cfrac    = f0 * (1.0 - Ds/D0) + fmin * (Ds/D0)
-          co2abs   = CO2ags*(MW_CO2/MW_Air)*rho
-          ci       = cfrac * (co2abs - CO2comp) + CO2comp
+          LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
+          LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
+          LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
 
-          ! calculate maximal gross primary production in high light conditions (Ag)
-          Ammax    = Ammax298 * Q10Am ** ( 0.1 * (thetasurf - 298.0) ) / ( (1. + &
-                     exp(0.3 * (T1Am - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2Am))))
+          Wltend = - LEliq / (rhow * Lv)
+          Wl     = Wl + Wltend * dtime
 
-          ! calculate effect of soil moisture stress on gross assimilation rate
-          betaw    = max(1.0e-3,min(1.0,(w2 - wwilt)/(wfc - wwilt)))
-
-          ! calculate stress function
-          fstr     = betaw
-
-          ! calculate gross assimilation rate (Am)
-          Am       = Ammax * (1 - exp( -(gm * (ci - CO2comp) / Ammax) ) )
-
-          Rdark    = (1.0/9) * Am
-
-          PAR      = 0.40*max(0.1,Swin*cveg)
-          ! calculate  light use efficiency
-          alphac   = alpha0 * (co2abs - CO2comp) / (co2abs + 2 * CO2comp)
-
-          ! 1.- calculate upscaling from leaf to canopy: net flow CO2 into the plant (An) 
-          tempy    = alphac * Kx * PAR / (Am + Rdark)
-          An       = (Am + Rdark) * (1 - 1.0 / (Kx * LAI) * (E1( tempy * exp(-Kx * LAI)) - E1(tempy)))
+          LE     = LEsoil + LEveg + LEliq
+          SH     = rho * Cp / ra * (Ts - thetam(1))
+          GR     = Lambda * (Ts - Tsoil)
 
 
-          ! 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
-          AGSa1    = 1.0 / (1 - f0)
-          Dstar    = D0 / (AGSa1 * (f0-fmin))
+          CG     = CGsat * (wsat / w2) ** (CLb / (2.0 * log(10.0)))
 
-          gcco2    = LAI * (gmin/nuco2q + AGSa1 * fstr * An / ((co2abs - CO2comp) * (1 + Ds / Dstar)))
+          Tsoiltend = CG * GR - 2.0 * pi / 86400.0 * (Tsoil - T2)
+          Tsoil  = Tsoil + Tsoiltend * dtime
 
-          ! calculate surface resistance for moisture and carbon dioxide
-          rsAgs    = 1.0 / (1.6 * gcco2)
-          rsCO2    = 1.0 / gcco2
+          C1     = C1sat * (wsat / wg) ** (CLb / 2.0 + 1.0)
+          C2     = C2ref * (w2 / (wsat - w2) )
+          wgeq   = w2 - wsat * CLa * ( (w2 / wsat) ** CLc * (1.0 - (w2 / wsat) ** (8.0 * CLc)) )
+          wgtend = - C1 / (rhow * 0.1) * LEsoil / Lv - C2 / 86400 * (wg - wgeq)
+          wg     = wg + wgtend * dtime
 
-          rs       = rsAgs
-
-          ! calculate net flux of CO2 into the plant (An)
-          An       = -(co2abs - ci) / (ra + rsCO2)
-
-          ! CO2 soil respiration surface flux
-          fw       = Cw * wsmax / (w2 + wsmin)
-!          Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil
-          Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
-
-          wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0/rho) !in ppm m/s
-
-        endif
-
-        ! recompute f2 using wg instead of w2
-        f2     = 1.e8
-        if (wg .gt. wwilt) then
-          f2   = (wfc - wwilt) / (wg - wwilt)
-        endif
-        f2     = max(1.0,min(1.e8, f2))
-
-        rssoil = rssoilmin * f2
-
-        Wlmx   = LAI * Wmax
-        cliq   = min(1.0, Wl / Wlmx)
-
-        Ts     = (Qtot + rho * Cp / ra * thetam(1) + cveg * (1.0-cliq) * rho &
-               * Lv / (ra + rs) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-               + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-               + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) + Lambda * Tsoil) &
-               * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
-               * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
-               
-        esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
-        qsatsurf = 0.622 * esatsurf / (pressure*100)
-
-        LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-        LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-        LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-
-        Wltend = - LEliq / (rhow * Lv)
-        Wl     = Wl + Wltend * dtime
-
-        LE     = LEsoil + LEveg + LEliq
-        SH     = rho * Cp / ra * (Ts - thetam(1))
-        GR     = Lambda * (Ts - Tsoil)
-
-
-        CG     = CGsat * (wsat / w2) ** (CLb / (2.0 * log(10.0)))
-
-        Tsoiltend = CG * GR - 2.0 * pi / 86400.0 * (Tsoil - T2)
-        Tsoil  = Tsoil + Tsoiltend * dtime
-
-        C1     = C1sat * (wsat / wg) ** (CLb / 2.0 + 1.0)
-        C2     = C2ref * (w2 / (wsat - w2) )
-        wgeq   = w2 - wsat * CLa * ( (w2 / wsat) ** CLc * (1.0 - (w2 / wsat) ** (8.0 * CLc)) )
-        wgtend = - C1 / (rhow * 0.1) * LEsoil / Lv - C2 / 86400 * (wg - wgeq)
-        wg     = wg + wgtend * dtime
+        endif ! lsea
 
         wthetas= SH / (rho * Cp)
         wqs    = LE / (rho * Lv * 1.0e-3)
@@ -1446,7 +1461,7 @@ implicit none
     if(lscu) then
       ! 1. calculate saturation deficit at zi 
       Ptop     = (pressure*100.) / exp((g * zi(1))/(Rd * thetam(1)))
-      Ttop     = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / cp)))  
+      Ttop     = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / Cp)))  
       estop    = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
       qstop    = (0.622 * estop) / Ptop
       qqs      = (qm(1)/1000.) - qstop
@@ -1465,7 +1480,7 @@ implicit none
       do ii=1,30        ! Puts limit on max amount of iterations, just to be sure...
         zlcl   = zlcl + (1.-RHlcl) * 1000.
         Ptop   = (pressure*100.) / exp((g * zlcl)/(Rd * thetam(1)))
-        Ttop   = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / cp)))  
+        Ttop   = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / Cp)))  
         estop  = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
         etop   = (qm(1)/1000.) * Ptop / 0.622 
         RHlcl  = etop / estop;
