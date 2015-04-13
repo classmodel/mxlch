@@ -418,7 +418,7 @@ implicit none
         icoeff(3) = int(reactions(react_nr)%inp(3)%coeff +0.05)
         icoeff(4) = int(reactions(react_nr)%inp(4)%coeff +0.05)
         select case(reactions(react_nr)%nr_chem_inp)
-		case (1) !the loss comp is the only reactant
+        case (1) !the loss comp is the only reactant
           select case (icoeff(1))
             case (1)
               PL_scheme(i)%PL(j)%formula = 0
@@ -519,7 +519,7 @@ implicit none
                   PL_scheme(i)%PL(j)%exp3  = icoeff(3) -1
                 endif
             end select
-		   endif
+          endif
         case (4) !we have 4 components on input
           if( reactions(react_nr)%inp(k)%name == PL_scheme(i)%name) then ! current selected
             PL_scheme(i)%PL(j)%formula = 7
@@ -546,7 +546,7 @@ implicit none
                 PL_scheme(i)%PL(j)%coef = reactions(react_nr)%inp(4)%coeff
             end select
           endif
- 	    end select
+        end select
       enddo
       endif
     enddo
