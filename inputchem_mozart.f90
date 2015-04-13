@@ -73,8 +73,8 @@ implicit none
   Q_cbl= Q_init
 
   if (ladvecchem .eqv. .false.) then
-    adv_chem_cbl(:)=0.0
-    adv_chem_ft( :)=0.0
+    adv_chem_cbl(:)=0.0_dp
+    adv_chem_ft( :)=0.0_dp
   endif
 
   call read_chem_mozart(chem_name)
@@ -138,9 +138,9 @@ implicit none
       reactions(react)%name   = rname
       reactions(react)%RadDep = raddep
 
-      RC(react)%Kreact   = 0
-      RC(react)%Keff_cbl = 0
-      RC(react)%Keff_ft  = 0
+      RC(react)%Kreact   = 0.0_dp
+      RC(react)%Keff_cbl = 0.0_dp
+      RC(react)%Keff_ft  = 0.0_dp
       RC(react)%rname   = rname
       RC(react)%RadDep = raddep
       RC(react)%func1 = func1
@@ -776,12 +776,12 @@ implicit none
   ISO%name    = 'ISO'
 
   !set all 0 elements to 1. incase we do calculations with unknown componets
-  c_cbl(0)=1.
-  c_ft(0)=1.
-  beta_ft(0)=1.
-  Q_cbl(0)=1.
-  E(0)=1.
-  c_current(0)=1
+  c_cbl(0)=1._dp
+  c_ft(0)=1._dp
+  beta_ft(0)=1._dp
+  Q_cbl(0)=1._dp
+  E(0)=1._dp
+  c_current(0)=1._dp
 
   do i=1, nchsp
     if (O3%name    == chem_name(i)) then ; O3%loc   = i;  cycle; endif
@@ -846,8 +846,8 @@ implicit none
   allocate (PL_scheme(nchsp), PL_temp(nchsp))
   allocate (productionloss(nchsp,mrpcc+2))!+2 for total production and loss terms
 
-  adv_chem_cbl(:)=0.0
-  adv_chem_ft( :)=0.0
+  adv_chem_cbl(:)=0.0_dp
+  adv_chem_ft( :)=0.0_dp
 
   PL_scheme(1)%name = '     '
   PL_scheme(1)%active = .false.
@@ -891,9 +891,9 @@ implicit none
 
   integer i
 
-  RC(0)%Kreact=1.
-  RC(0)%Keff_cbl=1.
-  RC(0)%Keff_ft=1.
+  RC(0)%Kreact=1._dp
+  RC(0)%Keff_cbl=1._dp
+  RC(0)%Keff_ft=1._dp
 
   R_O3%name   = 'R_O3'
   R_NO%name   = 'R_NO'

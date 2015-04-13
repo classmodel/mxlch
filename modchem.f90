@@ -22,6 +22,8 @@ integer,parameter :: NCCBA = 4   !Number Chemical Components Before Arrow !!!!!!
 integer,parameter :: NCCAA = 10  !Number Chemical Components After Arrow
 integer,parameter :: NNSPEC = 2*(NCCBA + NCCAA) - 1
 
+integer,parameter :: dp = kind(1.0d0)
+
 integer CBL,FT
 parameter( CBL = 1, FT = 0)
 integer PRODUCTION, LOSS

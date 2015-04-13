@@ -56,8 +56,8 @@ endif
  do i=1, tnor
   if (RC(i)%RadDep == 1 ) then
     if (lday .eqv. .false. ) then
-      RC(i)%Keff_cbl = 0.0
-      RC(i)%Keff_ft  = 0.0
+      RC(i)%Keff_cbl = 0.0_dp
+      RC(i)%Keff_ft  = 0.0_dp
     else
       select case ( RC(i)%func1 )
       case (0) ! constant independent of sza
@@ -75,10 +75,10 @@ endif
       case (4) ! powerfunction but special for JO3
       !need [H20] in kg/kg so c_cbl[H2O]*1e-9
          K = RC(i)%A * coszen ** RC(i)%B
-         RC(i)%Keff_cbl = K * RC(i)%D *  c_cbl(H2O%loc)*1.e-9 / &
-              (RC(i)%D * c_cbl(H2O%loc)*1.e-9  + RC(i)%E * (1.- c_cbl(H2O%loc)*1.e-9))
-         RC(i)%Keff_ft = K * RC(i)%D *  c_ft(H2O%loc)* 1.e-9 / &
-              (RC(i)%D * c_ft(H2O%loc)* 1.e-9 + RC(i)%E * (1.- c_ft(H2O%loc)*1.e-9))
+         RC(i)%Keff_cbl = K * RC(i)%D *  c_cbl(H2O%loc)*1d-9 / &
+              (RC(i)%D * c_cbl(H2O%loc)*1d-9  + RC(i)%E * (1._dp- c_cbl(H2O%loc)*1d-9))
+         RC(i)%Keff_ft = K * RC(i)%D *  c_ft(H2O%loc)* 1d-9 / &
+              (RC(i)%D * c_ft(H2O%loc)* 1d-9 + RC(i)%E * (1._dp- c_ft(H2O%loc)*1d-9))
       case (5)  !Jenkins J= A * coszen ^ B * exp(-C/coszen)
         RC(i)%Keff_cbl = RC(i)%A * coszen**RC(i)%B * exp(RC(i)%C /coszen )
         RC(i)%Keff_ft  = RC(i)%A * coszen**RC(i)%B * exp(RC(i)%C /coszen )
@@ -183,8 +183,8 @@ implicit none
        if (PL_scheme(n)%name == H2O%name) cycle ! don't do calculations for H2O
        if (PL_scheme(n)%name == PRODUC%name) cycle
    
-       YL = 0.
-       YP = 0.
+       YL = 0._dp
+       YP = 0._dp
        do j = 1, PL_scheme(n)%nr_PL
    
          if (PL_scheme(n)%PL(j)%PorL == PRODUCTION ) then  ! this the production

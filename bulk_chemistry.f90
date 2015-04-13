@@ -94,12 +94,12 @@ implicit none
 
   logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., lencroachment=.false., ladvecFT=.false., lgamma=.false., lenhancedentrainment=.false., lfixedlapserates=.false., lfixedtroposphere=.false. !c_fluxes replaces c_wth
   logical :: lradiation=.false.,lsurfacelayer=.false.,llandsurface=.false.,lrsAgs=.false., lCO2Ags=.false.
-  double precision :: zi(2),zi0 = 200 ,thetam(2), dtheta(2),pressure = 1013.0, wthetae
+  double precision :: zi(2),zi0 = 200 ,thetam(2), dtheta(2),pressure = 1013.0_dp, wthetae
   double precision temp_cbl, temp_ft
-  integer :: runtime,t, time=24*3600.0,tt
-  double precision :: beta = 0.2 ,wthetas=0.0,gamma = 0.006,thetam0 = 295,dtheta0 = 4,wthetav=0.0,dthetav
+  integer :: runtime,t, time=24*3600,tt
+  double precision :: beta = 0.2_dp ,wthetas=0.0_dp,gamma = 0.006_dp,thetam0 = 295,dtheta0 = 4,wthetav=0.0_dp,dthetav
   real :: dtime = 1
-  double precision :: z0 = 0.03, kappa, zp, alpha,z0m=0.03,z0h=0.03, hcrit = 10000, gamma2 = 0.006
+  double precision :: z0 = 0.03_dp, kappa, zp, alpha,z0m=0.03_dp,z0h=0.03_dp, hcrit = 10000, gamma2 = 0.006_dp
 !! ROUGHNESS LENGTH
 !! Terrain Description                                     ZO  (m)
 !! Open sea, fetch at least 5km                            0.0002
@@ -116,56 +116,56 @@ implicit none
   integer ierr,iter
   double precision pi
 
-  double precision :: wthetasmax = 0.0 , wqsmax = 0.0 , wcsmax = 0.0
+  double precision :: wthetasmax = 0.0_dp , wqsmax = 0.0_dp , wcsmax = 0.0_dp
 
-  double precision :: uws=0,vws=0,uws0 = 0.0 , vws0 = 0.0
+  double precision :: uws=0,vws=0,uws0 = 0.0_dp , vws0 = 0.0_dp
   double precision ustar
-  double precision :: um(2), vm(2), um0 = 0.0 , vm0 = 0.0, ueff, wstar
-  double precision :: ug = 0.0 , vg = 0.0
+  double precision :: um(2), vm(2), um0 = 0.0_dp , vm0 = 0.0_dp, ueff, wstar
+  double precision :: ug = 0.0_dp , vg = 0.0_dp
   double precision du(2), dv(2)
-  double precision :: ws,wsls=0.0, wsubs = 0.0 !wsubs = subsiding motions (subsidence + convective mass flux compensation) affecting inversions through the lapse rates
+  double precision :: ws,wsls=0.0_dp, wsubs = 0.0_dp        ! wsubs = subsiding motions (subsidence + convective mass flux compensation) affecting inversions through the lapse rates
   double precision uwe,vwe
-  double precision :: f,gammau = 0.0 , gammav = 0.0
+  double precision :: f,gammau = 0.0_dp , gammav = 0.0_dp
   double precision we
-  double precision :: advq = 0.0 ,lsq              ! large scale advection moisture (units (g/Kg)/s)!
-  double precision :: advtheta = 0.0 ,lstheta      ! large scale advection heat (units K/s)!
-  double precision :: cc=0.0,Qtot=400.0,albedo=0.2 ! cloud cover and incoming energy,albedo, incoming radiation
-  double precision :: DeltaF = 0.0, Rdistr = 1.0   ! Radiative gradient due to aerosols and clouds (neg. = absorption, pos. = emission): amount (W/m2) and distribution (1 = top, 0 = over entire mixed layer)
-  double precision :: DeltaFsw=0.0, DeltaFlw=0.0   ! Shortwave component (e.g. aerosols) and longwave component (e.g. clouds)
-  double precision :: wf                           ! Resulting boundary-layer development (following the lapse rate)
+  double precision :: advq = 0.0_dp ,lsq                    ! large scale advection moisture (units (g/Kg)/s)!
+  double precision :: advtheta = 0.0_dp ,lstheta            ! large scale advection heat (units K/s)!
+  double precision :: cc=0.0_dp,Qtot=400.0_dp,albedo=0.2_dp ! cloud cover and incoming energy,albedo, incoming radiation
+  double precision :: DeltaF = 0.0_dp, Rdistr = 1.0_dp      ! Radiative gradient due to aerosols and clouds (neg. = absorption, pos. = emission): amount (W/m2) and distribution (1 = top, 0 = over entire mixed layer)
+  double precision :: DeltaFsw=0.0_dp, DeltaFlw=0.0_dp      ! Shortwave component (e.g. aerosols) and longwave component (e.g. clouds)
+  double precision :: wf                                    ! Resulting boundary-layer development (following the lapse rate)
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
   double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m
   double precision :: Tr,Ta,costh !Needed for radiation calculation
   double precision :: Swin,Swout,Lwin,Lwout !Calculated radiations
   double precision :: Cs = -1, Constm
-  double precision :: esatsurf,qsatsurf,cq,rs=1.e6,ra,zsl,esat,qsat,rssoil
+  double precision :: esatsurf,qsatsurf,cq,rs=1d6,ra,zsl,esat,qsat,rssoil
   double precision :: desatdT, dqsatdT, efinal, f1, f2, f3, f4, C1, C2, wgeq
-  double precision :: w2=0.42,wfc=0.491,wwilt=0.314,gD=0.0,rsmin=0, LAI = 1.0
-  double precision :: wsat=0.6,CLa=0.083, CLb=11.4, CLc=12.0, C1sat=0.342, C2ref=0.3
-  double precision :: wg=0.40,rssoilmin=0,cliq,Wlmx,Wl=0.0,Wmax=2.0e-4,cveg=1.0
-  double precision :: Lambda = 5.9, Tsoil=285, T2=285, Tsoiltend, Wltend, CGsat=3.6e-6
+  double precision :: w2=0.42_dp,wfc=0.491_dp,wwilt=0.314_dp,gD=0.0_dp,rsmin=0, LAI = 1.0_dp
+  double precision :: wsat=0.6_dp,CLa=0.083_dp, CLb=11.4_dp, CLc=12.0_dp, C1sat=0.342_dp, C2ref=0.3_dp
+  double precision :: wg=0.40_dp,rssoilmin=0,cliq,Wlmx,Wl=0.0_dp,Wmax=2.0d-4,cveg=1.0_dp
+  double precision :: Lambda = 5.9_dp, Tsoil=285, T2=285, Tsoiltend, Wltend, CGsat=3.6d-6
   double precision :: LEveg, LEliq, LEsoil, LE, SH, GR, CG, wgtend
 
   double precision qm(2), dq(2),wqe
-  double precision :: betaq,wqs=0,gammaq = 0.0 ,qm0 = 0.0,dq0 =0.0
+  double precision :: betaq,wqs=0,gammaq = 0.0_dp ,qm0 = 0.0_dp,dq0 =0.0_dp
 
-  double precision :: cm(2), dc(2), wce, CO2ags, CO2comp, CO2comp298=68.5, Q10CO2=1.5
-  double precision :: gm298 = 7, Ammax298 = 2.2, Q10gm = 2, T1gm = 278, T2gm = 301 
-  double precision :: Q10Am = 2, T1Am = 281, T2Am = 311, f0 = 0.89, ad = 0.07, cfrac, co2abs, Ammax, betaw, PAR
-  double precision :: alpha0 = 0.017,Kx = 0.7, gmin = 2.5e-4, gm, fmin0, nuco2q=1.6, fmin, Ds, D0, ci, fstr, Am, Rdark
+  double precision :: cm(2), dc(2), wce, CO2ags, CO2comp, CO2comp298=68.5_dp, Q10CO2=1.5_dp
+  double precision :: gm298 = 7, Ammax298 = 2.2_dp, Q10gm = 2, T1gm = 278, T2gm = 301 
+  double precision :: Q10Am = 2, T1Am = 281, T2Am = 311, f0 = 0.89_dp, ad = 0.07_dp, cfrac, co2abs, Ammax, betaw, PAR
+  double precision :: alpha0 = 0.017_dp,Kx = 0.7_dp, gmin = 2.5d-4, gm, fmin0, nuco2q=1.6_dp, fmin, Ds, D0, ci, fstr, Am, Rdark
   double precision :: alphac, tempy, An, E1, AGSa1, Dstar, gcco2,rsAgs,rsCO2, Resp, fw, wco2
   double precision :: factorial
-  double precision :: Cw = 1.6e-3,wsmax=0.55,wsmin=0.005,R10=0.23,Eact0=53.3e3
-  double precision :: betac,wcs,gammac = 0.0,cm0 = 0.0,dc0 = 0.0
+  double precision :: Cw = 1.6d-3,wsmax=0.55_dp,wsmin=0.005_dp,R10=0.23_dp,Eact0=53.3d3
+  double precision :: betac,wcs,gammac = 0.0_dp,cm0 = 0.0_dp,dc0 = 0.0_dp
 
   logical          :: lsea=.false.  ! sea surface fluxes switch
-  double precision :: sst=285.0     ! sea surface temperature
+  double precision :: sst=285.0_dp     ! sea surface temperature
 
 
   ! Shallow cumulus
   logical          :: lscu=.false.,lrelaxdz=.false.
-  double precision :: tau=7200,dz=200,ca=0.5        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
+  double precision :: tau=7200,dz=200,ca=0.5_dp        ! if(lrelaxdz): dz relaxes as ddz/dt = 1/tau * zlcl-h
   double precision :: q2=0,ac=0,wm=0,wqm=0  
   double precision :: Ptop,Ttop,estop,etop,qstop,qqs
   double precision :: ev,tempd,templcl,zlcl,RHlcl
@@ -184,7 +184,7 @@ implicit none
   double precision :: CiTmc_ft, CiImc_ft
   double precision :: C1Imc, C2Imc, C3Imc, C1Imc_ft, C2Imc_ft, C3Imc_ft 
   double precision :: epsi_ft, C1Tmc_ft, C2Tmc_ft, C3Tmc_ft, C4Tmc_ft, C1_st_ft, C2_st_ft, C3_st_ft, C4_st_ft, X1_ft, X2_ft, X3_ft, X4_ft, T_ft, OAbgb_ft, Coait_ft, Coait_new_ft, Coa_ft
-  double precision :: mr2mc_OAbg, mr2mc_PRODT, mr2mc_PRODI, C10_st=1., C20_st=10., C30_st=100., C40_st=1000.
+  double precision :: mr2mc_OAbg, mr2mc_PRODT, mr2mc_PRODI, C10_st=1._dp, C20_st=10._dp, C30_st=100._dp, C40_st=1000._dp
   double precision :: kISORO2NO, kISORO2HO2, kTERPRO2NO, kTERPRO2HO2
   real, parameter :: T0      = 298.    ! temperature (K) at which the lab experiments and fitting are done, Tsimpidi'10
   real, parameter :: dHvap   = 30.e3   ! enthalpy of vaporization (J/mol), Lane'08
@@ -195,8 +195,8 @@ implicit none
 
   ! define variables for bVOC-emission
   logical          :: lBVOC =.false.
-  double precision :: BaserateISO = 0.0, BaserateTER = 0.0
-  double precision :: dwg = 0.06, gammaLAI, w1, gammasm
+  double precision :: BaserateISO = 0.0_dp, BaserateTER = 0.0_dp
+  double precision :: dwg = 0.06_dp, gammaLAI, w1, gammasm
   double precision :: beta_MT, Tref, gammaT_MT, gammace_MT, gamma_MT, eps_MT, rho_MT, ER_MT, mm_MT, cf_MT, F_TERP 
   double precision :: Thr, Tdaily, Topt, C_T1, C_T2, x, Eopt, gammaT_ISO, aa, Pac, Pdaily, Ptoa, phi, gammap, gammace_ISO, gamma_ISO, eps_ISO, rho_ISO, ER_ISO, mm_ISO, cf_ISO, F_ISO
   
@@ -218,12 +218,12 @@ implicit none
   
   !constants
 !  double precision,parameter :: rvrd = 461.5/287.04  !  Rv/Rd
-  real,parameter :: rvrd = 0.61     !Rd/Rv    
-  real,parameter :: bolz =  5.67e-8 !Stefan-Boltzmann constant [-]
-  real,parameter :: rhow =  1000.   !density of water [kg m-3]
-  real,parameter :: rho  =    1.2   !density of air [kg m-3]
-  real,parameter :: Rgas = 8.3145   ! gas constant (J mol-1 k-1)  
-  real           :: S0   =  1368.   !Incoming shortwave radiation [W m-2]
+  double precision,parameter :: rvrd = 0.61_dp     !Rd/Rv    
+  double precision,parameter :: bolz =  5.67d-8    !Stefan-Boltzmann constant [-]
+  double precision,parameter :: rhow =  1000._dp   !density of water [kg m-3]
+  double precision,parameter :: rho  =    1.2_dp   !density of air [kg m-3]
+  double precision,parameter :: Rgas = 8.3145_dp   ! gas constant (J mol-1 k-1)  
+  double precision           :: S0   =  1368._dp   !Incoming shortwave radiation [W m-2]
 
   !chemistry
   integer k
@@ -455,38 +455,38 @@ implicit none
   end if
 
   ! some variables
-  inf     = 1.0e-9        ! Correction to avoid divide by 0 if z0=0
-  eps     = 1.0e-4        ! Correction to avoid crashing with plots
+  inf     = 1.0d-9        ! Correction to avoid divide by 0 if z0=0
+  eps     = 1.0d-4        ! Correction to avoid crashing with plots
                           !   in visual BASIC
   aver3 = 300             ! saturation level will be calculated every 300s
 
-  pi=acos(-1.)
+  pi=acos(-1._dp)
 
   Rfact= 8.314e-2 ! mbar*m3 /K*mol
 
-  lcl = 3000.    !dummy value for first run
+  lcl = 3000._dp   !dummy value for first run
   a = 0
   n = 0
-  g = 9.81         !m/s2
-  Cf = 0.2         ! constants from D.Pino
-  CT = 4.          ! J. At. Sci. Vol. 60
-  eta = 2.         ! 1913 - 1926
-  C_m = 0.7        !
+  g = 9.81_dp      !m/s2
+  Cf = 0.2_dp      ! constants from D.Pino
+  CT = 4._dp       ! J. At. Sci. Vol. 60
+  eta = 2._dp      ! 1913 - 1926
+  C_m = 0.7_dp     !
 
   !    Define more constants for the 'saturation level'program
 
-  p0 = 100.00      !kPa
-  epsilon = 0.622  !g water / g air = Rd/Rv
-  Tabs = 273.0     !K
-  Cp = 1004.67     !J/ kg K
-  Rd = 287.053     !J/ kg K
-  Rv = 461.50      !J/ kg K
-  Lv = 2.501*10**6 !J/kg
-  e0 = 0.611       !kPa
-  gammad = -(g/Cp) !K/m
+  p0 = 100.00_dp      !kPa
+  epsilon = 0.622_dp  !g water / g air = Rd/Rv
+  Tabs = 273.0_dp     !K
+  Cp = 1004.67_dp     !J/ kg K
+  Rd = 287.053_dp     !J/ kg K
+  Rv = 461.50_dp      !J/ kg K
+  Lv = 2.501_dp*10**6 !J/kg
+  e0 = 0.611_dp       !kPa
+  gammad = -(g/Cp)    !K/m
 
-  kappa = 0.4     ! Von Karman constant
-  zp = 10.        ! Height for the calculation of the logarithmic equation for u* (m)
+  kappa = 0.4_dp     ! Von Karman constant
+  zp = 10._dp        ! Height for the calculation of the logarithmic equation for u* (m)
 
   ! Number of vertical points
   n_vert = 4
@@ -691,8 +691,8 @@ implicit none
   endtime_chem   = daytime_end
   starttime_adv  = daytime_start
   endtime_adv    = daytime_end
-  offset_wT      = 0.0
-  offset_wq      = 0.0
+  offset_wT      = 0.0_dp
+  offset_wq      = 0.0_dp
   !!Function:    just like chemistry functions:
   !!             0  =  no flux
   !!             1  =  constant flux
@@ -709,24 +709,24 @@ implicit none
   ! initialisation dynamics
 
   if (lencroachment) then
-    beta    = 0.0
-    dtheta0 = 0.0
-    dq0     = 0.0
+    beta    = 0.0_dp
+    dtheta0 = 0.0_dp
+    dq0     = 0.0_dp
   else
-    dthetav = dtheta0 + 1.e-03*rvrd*(qm0*dtheta0+thetam0*dq0+dtheta0*dq0)
-    if (dthetav .le. 0.0) then
+    dthetav = dtheta0 + 1d-03*rvrd*(qm0*dtheta0+thetam0*dq0+dtheta0*dq0)
+    if (dthetav .le. 0.0_dp) then
       write(*,*) 'Initial dthetav <= 0, but encroachment switch not activated!'
       write(*,*) 'dq is set to 0.0 and dtheta to 0.01 K'
-      dtheta0 = 0.01
-      dq0     = 0.0
+      dtheta0 = 0.01_dp
+      dq0     = 0.0_dp
     endif
-    if (beta .le. 0.0) then
+    if (beta .le. 0.0_dp) then
       write(*,*) 'WARNING: beta is set to ',beta
       write(*,*) 'This could result in unrealistic situations (negative inversions)'
     endif
   endif
 
-  f = 2.*pi/(24.*3600.)*2.*sin(pi*latt/180.) ! Coriolis parameter
+  f = 2._dp*pi/(24*3600)*2._dp*sin(pi*latt/180) ! Coriolis parameter
 
   runtime=nint(time/dtime)
 
@@ -947,43 +947,43 @@ implicit none
       thour = thour - 24 * (ceiling(thour/24)-1)
     endif
 
-    zsl = 0.1*zi(1) !Height of surface layer
+    zsl = zi(1) / 10  !Height of surface layer
 
 !   Start with radiation calculation
     if (lradiation) then
       costh = max(0.0,cos(getth(1.0*day,latt,long,thour))) 
       Ta    = thetam(1)*((((100*pressure)-zsl*rho*g)/(100*pressure))**(Rd/Cp))!pressure*100 to compensate for SI, 0.1 to get T at top of the SL
-      Tr    = (0.6 + 0.2 * costh) * (1 - 0.4 * cc)
+      Tr    = (0.6_dp + 0.2_dp * costh) * (1 - 0.4_dp * cc)
 
       Swin  = S0 * Tr * costh + DeltaFsw
       Swout = albedo * Swin
-      Lwin  = 0.8 * bolz * (Ta ** 4)
+      Lwin  = 0.8_dp * bolz * (Ta ** 4)
       Lwout = bolz * (Ts ** 4)
 
       Qtot  = Swin - Swout + Lwin - Lwout
     endif
 
-    thetav  = thetam(1) * (1. + 0.61 * qm(1) * 1.e-3)
-    wstar   = ( (g / thetav) * zi(1) * wthetav ) ** ( 1. / 3. )
-    ueff    = sqrt(um(1)**2.+vm(1)**2.+wstar**2.)
+    thetav  = thetam(1) * (1._dp + 0.61_dp * qm(1) * 1d-3)
+    wstar   = ( (g / thetav) * zi(1) * wthetav ) ** ( 1._dp / 3._dp )
+    ueff    = sqrt(um(1)**2._dp+vm(1)**2._dp+wstar**2._dp)
 !    ueff    = sqrt(um(1)**2.+vm(1)**2.)
     if (lsurfacelayer) then
-      if(ueff .lt. 1.e-2) stop 'effective wind velocity below 1 cm/s'
+      if(ueff .lt. 1d-2) stop 'effective wind velocity below 1 cm/s'
       if(t==1) then
         thetasurf = Ts 
       else
         thetasurf = thetam(1) + wthetas / (Cs * ueff)
       endif
-      esatsurf    = 0.611e3 * exp(17.2694 * (thetasurf - 273.16) / (thetasurf - 35.86))
-      qsatsurf    = 0.622 * esatsurf / (pressure*100)
-      cq          = 0.0
-      if(t/=1) cq = (1. + Cs * ueff * rs) ** (-1.)
-      if(lsea) cq = 1.0
-      qsurf       = (1. - cq) * qm(1) + cq * qsatsurf * 1.e3 !HGO factor for qsatsurf which is in kg/kg
+      esatsurf    = 0.611d3 * exp(17.2694_dp * (thetasurf - 273.16_dp) / (thetasurf - 35.86_dp))
+      qsatsurf    = 0.622_dp * esatsurf / (pressure*100)
+      cq          = 0.0_dp
+      if(t/=1) cq = (1._dp + Cs * ueff * rs) ** (-1._dp)
+      if(lsea) cq = 1.0_dp
+      qsurf       = (1._dp - cq) * qm(1) + cq * qsatsurf * 1d3 !HGO factor for qsatsurf which is in kg/kg
 
-      thetavsurf  = thetasurf * (1. + 0.61 * qsurf * 1.e-3)
+      thetavsurf  = thetasurf * (1._dp + 0.61_dp * qsurf * 1d-3)
 
-      Rib         = min(0.2,g/thetav * zsl * (thetav-thetavsurf) / (ueff ** 2.))
+      Rib         = min(0.2_dp,g/thetav * zsl * (thetav-thetavsurf) / (ueff ** 2._dp))
       L           = sign(dble(0.01),Rib)
       L0          = sign(dble(0.1),Rib)
 
@@ -991,32 +991,32 @@ implicit none
       do while(.true.)
         iter      = iter + 1
         L0        = L
-        fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
-        Lstart    = L - 0.001*L
-        Lend      = L + 0.001*L
-        fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart)) ** 2.) &
-                  - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend)) ** 2.) ) / (Lstart - Lend)
+        fx        = Rib - zsl / L * (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2._dp
+        Lstart    = L - 0.001_dp*L
+        Lend      = L + 0.001_dp*L
+        fxdif     = ( (- zsl / Lstart * (log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / (log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart)) ** 2._dp) &
+                  - (-zsl / Lend * (log(zsl / z0h)- psih(zsl / Lend) + psih(z0h / Lend)) / (log(zsl / z0m) - psim(zsl / Lend) + psim(z0m / Lend)) ** 2._dp) ) / (Lstart - Lend)
         L         = L - fx / fxdif
-        L         = sign(min(abs(L),1.e6),L)!capping L
+        L         = sign(min(abs(L),1d6),L)!capping L
 
-        if(abs((L - L0)/L) < 1e-4) exit 
-        if(abs((L - L0)) < 1e-3) exit 
+        if(abs((L - L0)/L) < 1d-4) exit 
+        if(abs((L - L0)) < 1d-3) exit 
       enddo
 
-      Constm =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2.
-      Cs     =  kappa ** 2. / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L))
+      Constm =  kappa ** 2._dp / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) ** 2._dp
+      Cs     =  kappa ** 2._dp / (log(zsl / z0m) - psim(zsl / L) + psim(z0m / L)) / (log(zsl / z0h) - psih(zsl / L) + psih(z0h / L))
 
       ustar  = sqrt(Constm) * ueff
       if(ustar .le. 0) stop "ustar has to be greater than 0"
       uws    = - Constm * ueff * um(1)
       vws    = - Constm * ueff * vm(1)
       
-      T2m    = thetasurf - wthetas / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
-      q2m    = qsurf     - wqs     / ustar / kappa * (log(2. / z0h) - psih(2. / L) + psih(z0h / L))
-      u2m    =           - uws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
-      v2m    =           - vws     / ustar / kappa * (log(2. / z0m) - psim(2. / L) + psim(z0m / L))
-      esat2m = 0.611e3 * exp(17.2694 * (T2m - 273.16) / (T2m - 35.86))
-      e2m    = q2m * 1.e-3 * (100*pressure) / 0.622  !HGO factor for q2m which is in g/kg
+      T2m    = thetasurf - wthetas / ustar / kappa * (log(2._dp / z0h) - psih(2._dp / L) + psih(z0h / L))
+      q2m    = qsurf     - wqs     / ustar / kappa * (log(2._dp / z0h) - psih(2._dp / L) + psih(z0h / L))
+      u2m    =           - uws     / ustar / kappa * (log(2._dp / z0m) - psim(2._dp / L) + psim(z0m / L))
+      v2m    =           - vws     / ustar / kappa * (log(2._dp / z0m) - psim(2._dp / L) + psim(z0m / L))
+      esat2m = 0.611d3 * exp(17.2694_dp * (T2m - 273.16_dp) / (T2m - 35.86_dp))
+      e2m    = q2m * 1d-3 * (100*pressure) / 0.622_dp  !HGO factor for q2m which is in g/kg
       rh2m   = e2m / esat2m
 
     else !lsurfacelayer
@@ -1031,20 +1031,20 @@ implicit none
         end if
         uws=uws0
         vws=vws0
-        ustar = ((uws**2.)+(vws**2.))**0.25
+        ustar = ((uws**2._dp)+(vws**2._dp))**0.25_dp
       else
-        ustar= kappa*sqrt(um(1)**2.+vm(1)**2.)/log(zp/z0)
+        ustar= kappa*sqrt(um(1)**2._dp+vm(1)**2._dp)/log(zp/z0)
 
-        if (um(1).ne.0.) then
+        if (um(1).ne.0._dp) then
           alpha=atan(vm(1)/um(1))
         else
-          if (vm(1).ne.0.) then
-              alpha=pi/2.
+          if (vm(1).ne.0._dp) then
+              alpha=pi/2._dp
           endif
         endif
 
-        uws=-ustar**2.*cos(alpha)
-        vws=-ustar**2.*sin(alpha)
+        uws=-ustar**2._dp*cos(alpha)
+        vws=-ustar**2._dp*sin(alpha)
 
       endif
 
@@ -1073,84 +1073,84 @@ implicit none
       wthetas = wthetasmax
       wqs     = wqsmax
       wcs     = wcsmax
-      wthetav = wthetasmax+rvrd*thetam(1)*wqsmax*1.0e-03
+      wthetav = wthetasmax+rvrd*thetam(1)*wqsmax*1.0d-03
       do i=1,nchsp
         Q_cbl(i) = Q_init(i)
       enddo
     else ! c_wth
       if (llandsurface) then
         if (lsea) then ! Sea surface
-          esatsurf     = 0.611e3 * exp(17.2694 * (sst - 273.16) / (sst - 35.86))
-          qsatsurf     = 0.622 * esatsurf / (pressure*100)
+          esatsurf     = 0.611d3 * exp(17.2694_dp * (sst - 273.16_dp) / (sst - 35.86_dp))
+          qsatsurf     = 0.622_dp * esatsurf / (pressure*100)
 
-          LE           = rho * Lv / ra * (qsatsurf - qm(1) * 1.0e-03)
+          LE           = rho * Lv / ra * (qsatsurf - qm(1) * 1.0d-03)
           SH           = rho * Cp / ra * (sst      - thetam(1))
         else           ! Land surface
           if(ustar .le. 0) stop "ustar has to be greater than 0"
-          ra       = ueff / (ustar ** 2.)
+          ra       = ueff / (ustar ** 2._dp)
 
-          esat     = 0.611e3 * exp(17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86))
-          qsat     = 0.622 * esat / (pressure*100)
-          desatdT  = esat * (17.2694 / (thetam(1) - 35.86) - 17.2694 * (thetam(1) - 273.16) / (thetam(1) - 35.86)**2.)
-          dqsatdT  = 0.622 * desatdT / (pressure*100)
-          efinal   = qm(1) * 1.0e-3 * (pressure*100) / 0.622 
+          esat     = 0.611d3 * exp(17.2694_dp * (thetam(1) - 273.16_dp) / (thetam(1) - 35.86_dp))
+          qsat     = 0.622_dp * esat / (pressure*100)
+          desatdT  = esat * (17.2694_dp / (thetam(1) - 35.86_dp) - 17.2694_dp * (thetam(1) - 273.16_dp) / (thetam(1) - 35.86_dp)**2._dp)
+          dqsatdT  = 0.622_dp * desatdT / (pressure*100)
+          efinal   = qm(1) * 1.0d-3 * (pressure*100) / 0.622_dp 
 
           if (lradiation) then
-                  f1 = 1.0 / ((0.004 * Swin + 0.05) / (0.81 * (0.004 * Swin + 1.)))
+                  f1 = 1.0_dp / ((0.004_dp * Swin + 0.05_dp) / (0.81_dp * (0.004_dp * Swin + 1._dp)))
           else
-                  f1 = 1.0
+                  f1 = 1.0_dp
           endif
 
-          f2     = 1.e8
+          f2     = 1d8
           if (w2 .gt. wwilt) then
             f2   = (wfc - wwilt) / (w2 - wwilt)
           endif
-          f2     = max(1.0,min(1.e8, f2))
+          f2     = max(1.0_dp,min(1d8, f2))
 
           if (lsurfacelayer) then
-            f3   = 1.0 / exp( - gD * (esat2m - e2m)/100.0 )
-            f4   = 1.0 / (1.0 - 0.0016 * (298.0 - T2m) ** 2.)
+            f3   = 1.0_dp / exp( - gD * (esat2m - e2m)/100 )
+            f4   = 1.0_dp / (1.0_dp - 0.0016_dp * (298.0_dp - T2m) ** 2._dp)
           else !Then just use BL-averaged values instead of 2 m values
-            f3   = 1.0 / exp( - gD * (esat - efinal)/100.0)
-            f4   = 1.0 / (1.0 - 0.0016 * (298.0 - thetam(1)) ** 2.)
+            f3   = 1.0_dp / exp( - gD * (esat - efinal)/100)
+            f4   = 1.0_dp / (1.0_dp - 0.0016_dp * (298.0_dp - thetam(1)) ** 2._dp )
           endif
 
           rs     = (rsmin / LAI) * f1 * f2 * f3 * f4 
 
           if (lrsAgs) then
             if(lchem .and. (CO2%loc .gt. 0) ) then
-              CO2ags = c_cbl(CO2%loc) / 1000.0 !CO2ags in ppm
+              CO2ags = c_cbl(CO2%loc) / 1000.0_dp !CO2ags in ppm
             else
-              CO2ags = cm(1) / 1000.0 !CO2ags in ppm
+              CO2ags = cm(1) / 1000.0_dp !CO2ags in ppm
             endif
 
             ! calculate surface resistances using plant physiological (A-gs) model
             ! calculate CO2 compensation concentration
-            CO2comp  = CO2comp298 * Q10CO2 ** ( 0.1 * (thetasurf - 298.0) )
+            CO2comp  = CO2comp298 * Q10CO2 ** ( 0.1_dp * (thetasurf - 298.0_dp) )
             CO2comp  = CO2comp * rho
 
             ! calculate mesophyll conductance
-            gm       = gm298 * Q10gm ** (0.1 * (thetasurf - 298.0) ) / ( (1. + exp(0.3 * (T1gm - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2gm))))
+            gm       = gm298 * Q10gm ** (0.1_dp * (thetasurf - 298.0_dp) ) / ( (1._dp + exp(0.3_dp * (T1gm - thetasurf))) * (1._dp + exp(0.3_dp * (thetasurf - T2gm))))
             gm       = gm / 1000   ! conversion from mm s-1 to m s-1
 
             ! calculate CO2 concentration inside the leaf (ci)
-            fmin0    = gmin/nuco2q - (1.0/9.0) * gm
-            fmin     = (-fmin0 + ( fmin0 ** 2.0 + 4 * gmin/nuco2q * gm ) ** (0.5)) / (2. * gm)
+            fmin0    = gmin/nuco2q - (1.0_dp/9.0_dp) * gm
+            fmin     = (-fmin0 + ( fmin0 ** 2.0_dp + 4 * gmin/nuco2q * gm ) ** (0.5_dp)) / (2._dp * gm)
 
-            esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
-            Ds       = (esatsurf - efinal) / 1000.0 ! in kPa
+            esatsurf = 0.611d3 * exp(17.2694_dp * (Ts - 273.16_dp) / (Ts - 35.86_dp))
+            Ds       = (esatsurf - efinal) / 1000.0_dp ! in kPa
             D0       = (f0 - fmin) / ad
 
-            cfrac    = f0 * (1.0 - Ds/D0) + fmin * (Ds/D0)
+            cfrac    = f0 * (1.0_dp - Ds/D0) + fmin * (Ds/D0)
             co2abs   = CO2ags*(MW_CO2/MW_Air)*rho
             ci       = cfrac * (co2abs - CO2comp) + CO2comp
 
             ! calculate maximal gross primary production in high light conditions (Ag)
-            Ammax    = Ammax298 * Q10Am ** ( 0.1 * (thetasurf - 298.0) ) / ( (1. + &
-                       exp(0.3 * (T1Am - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2Am))))
+            Ammax    = Ammax298 * Q10Am ** ( 0.1_dp * (thetasurf - 298.0_dp) ) / ( (1._dp + &
+                       exp(0.3_dp * (T1Am - thetasurf))) * (1._dp + exp(0.3_dp * (thetasurf - T2Am))))
 
             ! calculate effect of soil moisture stress on gross assimilation rate
-            betaw    = max(1.0e-3,min(1.0,(w2 - wwilt)/(wfc - wwilt)))
+            betaw    = max(1.0d-3,min(1.0_dp,(w2 - wwilt)/(wfc - wwilt)))
 
             ! calculate stress function
             fstr     = betaw
@@ -1158,26 +1158,26 @@ implicit none
             ! calculate gross assimilation rate (Am)
             Am       = Ammax * (1 - exp( -(gm * (ci - CO2comp) / Ammax) ) )
 
-            Rdark    = (1.0/9) * Am
+            Rdark    = (1.0_dp/9) * Am
 
-            PAR      = 0.40*max(0.1,Swin*cveg)
+            PAR      = 0.40_dp*max(0.1_dp,Swin*cveg)
             ! calculate  light use efficiency
             alphac   = alpha0 * (co2abs - CO2comp) / (co2abs + 2 * CO2comp)
 
             ! 1.- calculate upscaling from leaf to canopy: net flow CO2 into the plant (An) 
             tempy    = alphac * Kx * PAR / (Am + Rdark)
-            An       = (Am + Rdark) * (1 - 1.0 / (Kx * LAI) * (E1( tempy * exp(-Kx * LAI)) - E1(tempy)))
+            An       = (Am + Rdark) * (1 - 1.0_dp / (Kx * LAI) * (E1( tempy * exp(-Kx * LAI)) - E1(tempy)))
 
 
             ! 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
-            AGSa1    = 1.0 / (1 - f0)
+            AGSa1    = 1.0_dp / (1 - f0)
             Dstar    = D0 / (AGSa1 * (f0-fmin))
 
             gcco2    = LAI * (gmin/nuco2q + AGSa1 * fstr * An / ((co2abs - CO2comp) * (1 + Ds / Dstar)))
 
             ! calculate surface resistance for moisture and carbon dioxide
-            rsAgs    = 1.0 / (1.6 * gcco2)
-            rsCO2    = 1.0 / gcco2
+            rsAgs    = 1.0_dp / (1.6_dp * gcco2)
+            rsCO2    = 1.0_dp / gcco2
 
             rs       = rsAgs
 
@@ -1187,37 +1187,37 @@ implicit none
             ! CO2 soil respiration surface flux
             fw       = Cw * wsmax / (w2 + wsmin)
 !            Resp     = R10 * (1 - fw)*(1 + ustar) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil
-            Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15 * 8.314) * (1. - 283.15 / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
+            Resp     = R10 * (1 - fw) * exp( Eact0 / (283.15_dp * 8.314_dp) * (1._dp - 283.15_dp / (Tsoil))) ! substitute thetasurf_>T soil ustar is also removed
 
-            wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0/rho) !in ppm m/s
+            wco2     = (An + Resp)*(MW_Air/MW_CO2)*(1.0_dp/rho) !in ppm m/s
 
           endif
 
           ! recompute f2 using wg instead of w2
-          f2     = 1.e8
+          f2     = 1d8
           if (wg .gt. wwilt) then
             f2   = (wfc - wwilt) / (wg - wwilt)
           endif
-          f2     = max(1.0,min(1.e8, f2))
+          f2     = max(1.0_dp,min(1d8, f2))
 
           rssoil = rssoilmin * f2
 
           Wlmx   = LAI * Wmax
-          cliq   = min(1.0, Wl / Wlmx)
+          cliq   = min(1.0_dp, Wl / Wlmx)
 
-          Ts     = (Qtot + rho * Cp / ra * thetam(1) + cveg * (1.0-cliq) * rho &
-                 * Lv / (ra + rs) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-                 + (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) &
-                 + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0e-3) + Lambda * Tsoil) &
-                 * (rho * Cp / ra + cveg * (1. - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1. - cveg) &
-                 * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1.)
+          Ts     = (Qtot + rho * Cp / ra * thetam(1) + cveg * (1.0_dp-cliq) * rho &
+                 * Lv / (ra + rs) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0d-3) &
+                 + (1.0_dp - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0d-3) &
+                 + cveg * cliq * rho * Lv / ra * (dqsatdT * thetam(1) - qsat + qm(1) * 1.0d-3) + Lambda * Tsoil) &
+                 * (rho * Cp / ra + cveg * (1._dp - cliq) * rho * Lv / (ra + rs) * dqsatdT + (1._dp - cveg) &
+                 * rho * Lv / (ra + rssoil) * dqsatdT + cveg * cliq * rho * Lv / ra * dqsatdT + Lambda) ** (-1._dp)
                  
-          esatsurf = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
-          qsatsurf = 0.622 * esatsurf / (pressure*100)
+          esatsurf = 0.611d3 * exp(17.2694_dp * (Ts - 273.16_dp) / (Ts - 35.86_dp))
+          qsatsurf = 0.622_dp * esatsurf / (pressure*100)
 
-          LEveg  = (1.0 - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-          LEliq  =        cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
-          LEsoil =         (1.0 - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0e-3)
+          LEveg  = (1.0_dp - cliq) * cveg  * rho * Lv / (ra + rs)     * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0d-3)
+          LEliq  =           cliq  * cveg  * rho * Lv /  ra           * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0d-3)
+          LEsoil =         (1.0_dp - cveg) * rho * Lv / (ra + rssoil) * (dqsatdT * (Ts - thetam(1)) + qsat - qm(1) * 1.0d-3)
 
           Wltend = - LEliq / (rhow * Lv)
           Wl     = Wl + Wltend * dtime
@@ -1227,21 +1227,21 @@ implicit none
           GR     = Lambda * (Ts - Tsoil)
 
 
-          CG     = CGsat * (wsat / w2) ** (CLb / (2.0 * log(10.0)))
+          CG     = CGsat * (wsat / w2) ** (CLb / (2.0_dp * log(10.0_dp)))
 
-          Tsoiltend = CG * GR - 2.0 * pi / 86400.0 * (Tsoil - T2)
+          Tsoiltend = CG * GR - 2.0_dp * pi / 86400 * (Tsoil - T2)
           Tsoil  = Tsoil + Tsoiltend * dtime
 
-          C1     = C1sat * (wsat / wg) ** (CLb / 2.0 + 1.0)
+          C1     = C1sat * (wsat / wg) ** (CLb / 2.0_dp + 1.0_dp)
           C2     = C2ref * (w2 / (wsat - w2) )
-          wgeq   = w2 - wsat * CLa * ( (w2 / wsat) ** CLc * (1.0 - (w2 / wsat) ** (8.0 * CLc)) )
-          wgtend = - C1 / (rhow * 0.1) * LEsoil / Lv - C2 / 86400 * (wg - wgeq)
+          wgeq   = w2 - wsat * CLa * ( (w2 / wsat) ** CLc * (1.0_dp - (w2 / wsat) ** (8.0_dp * CLc)) )
+          wgtend = - C1 / (rhow * 0.1_dp) * LEsoil / Lv - C2 / 86400 * (wg - wgeq)
           wg     = wg + wgtend * dtime
 
         endif ! lsea
 
         wthetas= SH / (rho * Cp)
-        wqs    = LE / (rho * Lv * 1.0e-3)
+        wqs    = LE / (rho * Lv * 1.0d-3)
         wcs    = wcsmax
 
         if (lBVOC) then  ! BVOC emissions
@@ -1261,18 +1261,18 @@ implicit none
           endif
 
            ! MT-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm, and Sakulnayontvittaya'08      
-           gammaLAI   = 0.49*LAI/((1.+0.2*LAI**2.)**0.5)
+           gammaLAI   = 0.49_dp*LAI/((1._dp+0.2_dp*LAI**2._dp)**0.5_dp)
            
            w1         = wwilt + dwg  ! (eq. 20 Guenther06)
            if (wg .gt. w1) then  
-           gammasm    = 1.  
+           gammasm    = 1._dp  
            elseif (wg .lt. wwilt) then
-           gammasm    = 0.
+           gammasm    = 0._dp
            else
            gammasm    = (wg-wwilt)/dwg
            endif
 
-           beta_MT    = 0.13 ! (K-1) (Sakulnayontvittaya08)
+           beta_MT    = 0.13_dp ! (K-1) (Sakulnayontvittaya08)
            Tref       = 303  ! reference temperature for bVOC BaseEmissionRate (K) 
            gammaT_MT  = exp(beta_MT*(Ts-Tref))
 
@@ -1280,69 +1280,69 @@ implicit none
            gamma_MT   = gammace_MT * gammasm ! emission activity factor terpene (-) (eq.2, Guenther96) (no light and leaf age dependence)
              
            eps_MT     = BaserateTer ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
-           rho_MT     = 1. ! factor that accounts for chemical production and loss within plant canopies (-)
+           rho_MT     = 1._dp ! factor that accounts for chemical production and loss within plant canopies (-)
            ER_MT      = eps_MT * gamma_MT * rho_MT ! monoterpene emission rate (μg m-2 h-1)
             
-           mm_MT      = 10.*12.01 + 16.*1.008    ! molecular mass C10H16
-           cf_MT      = mm_MT*((pressure*100.)/(Rgas*Ts)*3600*1e-3) ! flux conversion factor ppb m s-1 -> ug m-2 h-1
+           mm_MT      = 10._dp*12.01_dp + 16._dp*1.008_dp    ! molecular mass C10H16
+           cf_MT      = mm_MT*((pressure*100)/(Rgas*Ts)*3600d-3) ! flux conversion factor ppb m s-1 -> ug m-2 h-1
            F_TERP     = ER_MT / cf_MT             ! isoprene emission rate (ppb m s-1)
 
            !ISO-emission following Guenther'06, using parameterized canopy environment emission activity (PCEEA) algorithm         
            Thr        = Ts ! should be hourly average temperature (K)
-           Tdaily     = 295. ! daily average temperature (K)
-           Topt       = 313 + (0.6*(Tdaily-297)) ! (adapted from eq. 8 Guenther06)
-           C_T1       = 80.  ! empirical coefficient
-           C_T2       = 200. ! empirical coefficient
-           x          = ((1/Topt)-(1/Thr))/0.00831
-           Eopt       = 1.75*exp(0.08*(Tdaily-297)) 
+           Tdaily     = 295._dp ! daily average temperature (K)
+           Topt       = 313 + (0.6_dp*(Tdaily-297)) ! (adapted from eq. 8 Guenther06)
+           C_T1       = 80._dp  ! empirical coefficient
+           C_T2       = 200._dp ! empirical coefficient
+           x          = ((1/Topt)-(1/Thr))/0.00831_dp
+           Eopt       = 1.75_dp*exp(0.08_dp*(Tdaily-297)) 
            gammaT_ISO = Eopt * C_T2 * exp(C_T1*x)/(C_T2-C_T1*(1-exp(C_T2*x)))
 
-           aa         = zenith + 90. ! solar angle relative to surface = zenith angle + 90 (deg.)
+           aa         = zenith + 90._dp ! solar angle relative to surface = zenith angle + 90 (deg.)
            Pac        = PAR ! above canopy PPFD (umol m-2 s-1)
            Pdaily     = PAR !?! daily average above canopy PPFD (umol m-2 s-1)
-           Ptoa       = 3000. + 99*cos((2*pi*((day-10.)/365.))*pi/180.0) ! 
-           phi        = Pac/(sin(aa*(pi/180.0))*Ptoa)! above canopy PPFD transmission (-) ! 
-           gammap     = sin(aa*(pi/180.0))*(2.46*(1.+0.0005*(Pdaily-400.))*phi*0.9*phi**2.) ! 
+           Ptoa       = 3000._dp + 99*cos((2*pi*((day-10._dp)/365._dp))*pi/180) ! 
+           phi        = Pac/(sin(aa*(pi/180))*Ptoa)! above canopy PPFD transmission (-) ! 
+           gammap     = sin(aa*(pi/180))*(2.46_dp*(1._dp+0.0005_dp*(Pdaily-400._dp))*phi*0.9_dp*phi**2._dp) ! 
 
            gammace_ISO= gammaLAI * gammaT_ISO * gammap
            gamma_ISO  = gammace_ISO * gammasm
                
            eps_ISO    = BaserateIso  ! emission factor representing net in-canopy emission rate at standard conditions (μg m-2 h-1 at 303 K)
-           rho_ISO    = 0.96     
+           rho_ISO    = 0.96_dp     
            ER_ISO     = eps_ISO * gamma_ISO * rho_ISO ! isoprene emission rate (μg m-2 h-1)
-           mm_ISO     = 5.*12.01 + 8.*1.008      ! molecular mass C5H8
-           cf_ISO     = mm_ISO*((pressure*100.)/(Rgas*Ts)*3600*1e-3)! flux conversion factor ppb m s-1 -> ug m-2 h-1
+           mm_ISO     = 5*12.01_dp + 8*1.008_dp      ! molecular mass C5H8
+           cf_ISO     = mm_ISO*((pressure*100)/(Rgas*Ts)*3600*1d-3)! flux conversion factor ppb m s-1 -> ug m-2 h-1
            F_ISO      = ER_ISO / cf_ISO           ! monoterpene emission rate (ppb m s-1)
         endif ! bVOC
 
       else !llandsurface
 
         if (sec .le. daytime_start .or. sec > daytime_end) then
-                wcs = 0.
+                wcs = 0._dp
         else
                 wcs = wcsmax * sin(pi * (sec - daytime_start)/daylength)
         end if
 
         select case(function_wT)
           case(0)
-            wthetas = 0.
+            wthetas = 0._dp
           case(1)
             wthetas = wthetasmax
           case(2)
             if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
+              wthetas = 0._dp
             else
               wthetas = wthetasmax * sin(pi * (sec - starttime_wT)/(endtime_wT - starttime_wT)) 
             end if
           case(3)
             if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
+              wthetas = 0._dp
             else
               wthetas = wthetasmax 
             end if
           case(4)
             if ((sec .le. starttime_wT) .or. (sec .ge. endtime_wT)) then
-              wthetas = 0.
+              wthetas = 0._dp
             else
               wthetas = (wthetasmax/2) * (1 - cos(2*pi*(sec - starttime_wT)/(endtime_wT - starttime_wT)))
             end if
@@ -1354,24 +1354,24 @@ implicit none
 
         select case(function_wq)
           case(0)
-            wqs = 0.
+            wqs = 0._dp
           case(1)
             wqs = wqsmax
           case(2)
             if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
+              wqs = 0._dp
             else
               wqs = wqsmax * sin(pi * (sec - starttime_wq)/(endtime_wq - starttime_wq)) 
             end if
           case(3)
             if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
+              wqs = 0._dp
             else
               wqs = wqsmax 
             end if
           case(4)
             if ((sec .le. starttime_wq) .or. (sec .ge. endtime_wq)) then
-              wqs = 0.
+              wqs = 0._dp
             else
               wqs = (wqsmax/2) * (1 - cos(2*pi*(sec - starttime_wq)/(endtime_wq - starttime_wq)))
             end if
@@ -1383,29 +1383,29 @@ implicit none
 
       endif !llandsurface
 
-      wthetav = wthetas + rvrd*thetam(1)*wqs*1.0e-03
+      wthetav = wthetas + rvrd*thetam(1)*wqs*1.0d-03
 
       do i=1,nchsp
         select case (Q_func(i))
           case (0)
-            Q_cbl(i) = 0.
+            Q_cbl(i) = 0._dp
           case (1)
             Q_cbl(i) = Q_init(i)
           case (2)
             if ((sec .le. starttime_chem) .or. (sec .ge. endtime_chem)) then
-              Q_cbl(i) = 0.
+              Q_cbl(i) = 0._dp
             else
               Q_cbl(i) = Q_init(i) * sin(pi * (sec - starttime_chem)/(endtime_chem - starttime_chem))
             end if
           case (3)
             if ((sec .le. starttime_chem) .or. (sec .ge. endtime_chem)) then
-              Q_cbl(i) = 0.
+              Q_cbl(i) = 0._dp
             else
               Q_cbl(i) = Q_init(i)
             endif
           case (4)
             if ((sec .le. starttime_chem) .or. (sec .ge. endtime_chem)) then
-              Q_cbl(i) = 0. 
+              Q_cbl(i) = 0._dp
             else
               Q_cbl(i) = (Q_init(i)/2) * (1 - cos(2*pi*(sec - starttime_chem)/(endtime_chem - starttime_chem)))
             endif
@@ -1413,7 +1413,7 @@ implicit none
               Q_cbl(i) = - Q_init(i) * c_cbl(i)             
           case default
             if (t==1) print *,'Emission function for species ', i, 'is undefined'
-            Q_cbl(i) = 0.
+            Q_cbl(i) = 0._dp
         end select
       enddo
 
@@ -1436,7 +1436,7 @@ implicit none
       endif
     endif !(c_wth)
 
-    if (wthetav .lt. 0.0) wthetav = 0.0
+    if (wthetav .lt. 0.0_dp) wthetav = 0.0_dp
 
     if (t==1) then ! write in initial_chem the used fluxes
       write (46,*)' '
@@ -1448,8 +1448,8 @@ implicit none
     ws=-wsls*zi(1)
 !
 !   introducing advection moisture
-    lsq     = 0.0
-    lstheta = 0.0
+    lsq     = 0.0_dp
+    lstheta = 0.0_dp
     if ((sec .ge. starttime_adv) .and. (sec .lt. endtime_adv)) then
       lsq     = advq
       lstheta = advtheta
@@ -1460,11 +1460,11 @@ implicit none
 !   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if(lscu) then
       ! 1. calculate saturation deficit at zi 
-      Ptop     = (pressure*100.) / exp((g * zi(1))/(Rd * thetam(1)))
+      Ptop     = (pressure*100) / exp((g * zi(1))/(Rd * thetam(1)))
       Ttop     = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / Cp)))  
-      estop    = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
-      qstop    = (0.622 * estop) / Ptop
-      qqs      = (qm(1)/1000.) - qstop
+      estop    = 611._dp * exp((Lv / Rv) * ((1._dp / 273.15_dp)-(1._dp / Ttop)))
+      qstop    = (0.622_dp * estop) / Ptop
+      qqs      = (qm(1)/1000) - qstop
 
       ! 2. iterative solution LCL
         !! solution differs from saturation routine MXLCH !!
@@ -1473,38 +1473,38 @@ implicit none
         !! and thus yields a higer lcl
       if(t.eq.1) then   ! Put random guess for lcl, RHlcl
         zlcl   = zi(1)
-        RHlcl  = 0.5;
+        RHlcl  = 0.5_dp;
       else              ! Perturb RHlcl to start iteration
-        RHlcl  = 0.9998;
+        RHlcl  = 0.9998_dp;
       end if
       do ii=1,30        ! Puts limit on max amount of iterations, just to be sure...
-        zlcl   = zlcl + (1.-RHlcl) * 1000.
-        Ptop   = (pressure*100.) / exp((g * zlcl)/(Rd * thetam(1)))
+        zlcl   = zlcl + (1._dp-RHlcl) * 1000
+        Ptop   = (pressure*100) / exp((g * zlcl)/(Rd * thetam(1)))
         Ttop   = (thetam(1) / (((p0*1000) / Ptop) ** (Rd / Cp)))  
-        estop  = 611. * exp((Lv / Rv) * ((1. / 273.15)-(1. / Ttop)))
-        etop   = (qm(1)/1000.) * Ptop / 0.622 
+        estop  = 611._dp * exp((Lv / Rv) * ((1._dp / 273.15_dp)-(1._dp / Ttop)))
+        etop   = (qm(1)/1000) * Ptop / 0.622_dp 
         RHlcl  = etop / estop;
-        if((RHlcl .ge. 0.9999) .and. (RHlcl .le. 1.0001)) exit
+        if((RHlcl .ge. 0.9999_dp) .and. (RHlcl .le. 1.0001_dp)) exit
       end do
 
       ! 3. iterate wqM and ac
-      wqm      = 0.
-      q2       = 1e-10
-      wm       = 0.
+      wqm      = 0._dp
+      q2       = 1d-10
+      wm       = 0._dp
       do ii=1,30        ! to-do: smarter iteration
-        if(dq(1) < 0 .and. wstar > 0) q2 = -((-we*(dq(1)/1000.))+wqm) * (dq(1)/1000.) * zi(1) / (dz * wstar)
-        if(q2 < 0)    q2 = 1e-10
-        ac     = max(0.,(0.5 + (0.36 * atan(1.55 * (((qm(1)/1000.) - qstop) / sqrt(q2))))))
+        if(dq(1) < 0 .and. wstar > 0) q2 = -((-we*(dq(1)/1000))+wqm) * (dq(1)/1000) * zi(1) / (dz * wstar)
+        if(q2 < 0)    q2 = 1d-10
+        ac     = max(0._dp,(0.5_dp + (0.36_dp * atan(1.55_dp * (((qm(1)/1000._dp) - qstop) / sqrt(q2))))))
         wm     = ac * wstar
         wqm    = ca * sqrt(q2) * wm
       end do
 
       ! 4. relaxe dz if(lrelaxdz)
-      if(ac>0 .or. ((zlcl - zi(1)) .lt. 300.0)) then
+      if(ac>0 .or. ((zlcl - zi(1)) .lt. 300.0_dp)) then
        if(lrelaxdz) then
         dz    = dz + ((zlcl - zi(1)) - dz) * dtime/tau
        else
-        dz    = min(max(zlcl - zi(1),100.0),500.0)
+        dz    = min(max(zlcl - zi(1),100.0_dp),500.0_dp)
        end if
       end if
     end if
@@ -1523,10 +1523,10 @@ implicit none
             
 !   jump depending on the virtual temperature jump
       dthetav = dtheta(1) + &
-      1.e-03*rvrd*(qm(1)*dtheta(1)+thetam(1)*dq(1)+dtheta(1)*dq(1))
+      1.d-03*rvrd*(qm(1)*dtheta(1)+thetam(1)*dq(1)+dtheta(1)*dq(1))
       we = (beta*wthetav/dthetav)
       if (lenhancedentrainment) then
-        we = we + 5. * (ustar**3.) * thetav / (g * zi(1) * dthetav)
+        we = we + 5._dp * (ustar**3._dp) * thetav / (g * zi(1) * dthetav)
       endif
       wf = Rdistr * DeltaF / ( rho * Cp * dtheta(1) )
 !      we = we + wf  ! Aerosol absorption basically undoes part of we
@@ -1545,13 +1545,13 @@ implicit none
 !     Calculation boundary layer height.
 !     Based on Garratt (6.18) page 155 and
 !     on the article of Betts 1973 and 1974
-      beta   = 0.
-      we     = 0. 
+      beta   = 0._dp
+      we     = 0._dp 
 
       zi(2)   = zi(1) + ((1/(gamma*(zi(1)+inf)))*((1+beta)*wthetav) &
               + ws)*dtime
       hcrit   = hcrit + ws * dtime
-      dtheta(2)=0.
+      dtheta(2)=0._dp
       thetam(2)=thetam(1)+ &
             ((1/(zi(1)+inf))*wthetas)*dtime + lstheta*dtime         !eq  (1)
     endif
@@ -1564,22 +1564,22 @@ implicit none
 ! ---- Specific humidity
     if (beta /= 0) then
         wqe = -(we+wf)*dq(1)
-        dq(2)=dq(1)+ ((gammaq*(we + wf + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
+        dq(2)=dq(1)+ ((gammaq*(we + wf + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000)))*dtime   !eq. (3)
         if (.not. ladvecFT) dq(2) = dq(2) - lsq*dtime
     else
-        wqe  = 0.
-        dq(2)= 0.
+        wqe  = 0._dp
+        dq(2)= 0._dp
     endif
 
-    qm(2)=qm(1)+((1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime+lsq*dtime          !eq  (1)
+    qm(2)=qm(1)+((1/(zi(1)+inf))*(wqs - wqe - (wqm*1000)))*dtime+lsq*dtime          !eq  (1)
 ! -----------Carbon Dioxide
 
     if (beta /= 0) then
       wce = -(we+wf)*dc(1)
       dc(2)=dc(1)+ ((gammac*(we + wf + wsubs))-(1/(zi(1)+inf))*(wcs - wce))* dtime   !eq. (3)
     else
-      wce    = 0.
-      dc(2)  =0.
+      wce    = 0._dp
+      dc(2)  =0._dp
     endif
 
     cm(2)=cm(1)+((1/(zi(1)+inf))*(wcs - wce))*dtime        !eq  (1)
@@ -1592,10 +1592,10 @@ implicit none
       du(2)=du(1)+ ((gammau*(we + wf + wsubs))-(1/(zi(1)+inf))*(uws - uwe)+ f*dv(1))* dtime                 !eq. (3)
       dv(2)=dv(1)+ ((gammav*(we + wf + wsubs))-(1/(zi(1)+inf))*(vws - vwe) - f*du(1))*dtime                 !eq. (3)
     else
-      uwe = 0.
-      vwe = 0.
-      du(2)=0.
-      dv(2)=0.
+      uwe = 0._dp
+      vwe = 0._dp
+      du(2)=0._dp
+      dv(2)=0._dp
     endif
 
     um(2)=um(1)+(-f*(dv(1))+(1/(zi(1)+inf))*(uws-uwe))*dtime
@@ -1604,16 +1604,16 @@ implicit none
 !   closure assumption
     wthetae= - (we+wf) * dtheta(1)
 
-    if (wqs.ne.0.) then
+    if (wqs.ne.0._dp) then
         betaq = -wqe/wqs
     else
-        betaq=0.
+        betaq=0._dp
     endif
 
-    if (wcs.ne.0.) then
+    if (wcs.ne.0._dp) then
         betac = -wce/wcs
     else
-        betac=0.
+        betac=0._dp
     endif
 
 !   Calculate saturation level and vertical profiles of the air temperature,
@@ -1650,7 +1650,7 @@ implicit none
 
 !       Do loop to calculate variables
 
-        np = (p0-75)/50.
+        np = (p0-75)/50._dp
         p = p0
 
         do i = 0, sat_lev-1
@@ -1658,14 +1658,14 @@ implicit none
           p = p-np
 
 !         If qs > qt then no saturation
-          if ((qs_s-qt_s)> 0.0) then
+          if ((qs_s-qt_s)> 0.0_dp) then
 
             Tair = T_s*((p/p0)**(Rd/Cp))
 
             if (qm(2)>0) then
-              qt = qm(2)/1000.        !Mixed-layer spec. humidity in g/Kg
+              qt = qm(2)/1000        !Mixed-layer spec. humidity in g/Kg
             else
-              qt = 0.000001
+              qt = 0.000001_dp
             end if
 
             z = (Tair - T_s)/gammad
@@ -1762,11 +1762,11 @@ implicit none
         c_cbl(k)=c_cbl(k)+(1/zi(1))*(Q_cbl(k)-E(k))*dtime
         c_cbl(k)=c_cbl(k)+adv_chem_cbl(k)*dtime
         c_ft( k)=c_ft( k)+adv_chem_ft(k )*dtime
-        c_cbl(k) = max(0.0, c_cbl(k) )
-        c_ft( k) = max(0.0, c_ft( k) )
+        c_cbl(k) = max(0.0_dp, c_cbl(k) )
+        c_ft( k) = max(0.0_dp, c_ft( k) )
 
-        if (Q_cbl(k) == 0.) then
-          beta_ft(k)=0
+        if (Q_cbl(k) == 0._dp) then
+          beta_ft(k)=0._dp
         else
           beta_ft(k)=E(k)/Q_cbl(k)
         endif
@@ -1776,14 +1776,14 @@ implicit none
         temp_cbl = t_ref_cbl
         temp_ft  = t_ref_ft
 
-        c_cbl(H2O%loc)= q_ref_cbl* MW_Air/MW_H2O * 1e6
-        c_ft(H2O%loc) = q_ref_ft * MW_Air/MW_H2O * 1e6
+        c_cbl(H2O%loc)= q_ref_cbl* MW_Air/MW_H2O * 1d6
+        c_ft(H2O%loc) = q_ref_ft * MW_Air/MW_H2O * 1d6
       else
         temp_cbl = thetam(2)
         temp_ft  = thetam(2) + dtheta(2)
 
-        c_cbl(H2O%loc)=qm(2)* MW_Air/MW_H2O * 1e6
-        c_ft(H2O%loc)=(qm(2)+ dq(2))* MW_Air/MW_H2O * 1e6
+        c_cbl(H2O%loc)=qm(2)* MW_Air/MW_H2O * 1d6
+        c_ft(H2O%loc)=(qm(2)+ dq(2))* MW_Air/MW_H2O * 1d6
       endif
 
       if(lcomplex) then
@@ -1819,12 +1819,12 @@ implicit none
     ! Gas/Particle-partitioning using the Volatility Basis Set (Donahue'06, ES&T) with 4 bins
     if(lvbs) then
         ! G/P-partitioning BL 
-        T_hh    = thetam(2)+gammad*(zi(2)/2.)         ! T at h/2; dry adiabatic lapse rate T = (theta-g/Cp)*z
+        T_hh    = thetam(2)+gammad*(zi(2)/2._dp)         ! T at h/2; dry adiabatic lapse rate T = (theta-g/Cp)*z
         T_ft = (thetam(2)+dtheta(2))+gammad*zi(2)  ! temperature at the inversion: <theta> + dtheta
     
-        mr2mc_PRODT = ((pressure*100.)*PRODTmm)/(Rgas*T_hh) * 1e-3 ! factor to convert TERP products (SVOCs) from ppb to ug/m3
-        mr2mc_PRODI = ((pressure*100.)*PRODImm)/(Rgas*T_hh) * 1e-3 ! factor to convert ISO products (SVOCs) from ppb to ug/m3
-        mr2mc_OAbg  = ((pressure*100.)*mmOAbg)/(Rgas*T_hh) * 1e-3  ! factor to convert OAbg from ppb to ug/m3 
+        mr2mc_PRODT = ((pressure*100)*PRODTmm)/(Rgas*T_hh) * 1d-3 ! factor to convert TERP products (SVOCs) from ppb to ug/m3
+        mr2mc_PRODI = ((pressure*100)*PRODImm)/(Rgas*T_hh) * 1d-3 ! factor to convert ISO products (SVOCs) from ppb to ug/m3
+        mr2mc_OAbg  = ((pressure*100)*mmOAbg)/(Rgas*T_hh)  * 1d-3  ! factor to convert OAbg from ppb to ug/m3 
         !print *, mr2mc_OAbg
         OAbgb = c_cbl(OAbg%loc)!* mr2mc_OAbg  ! convert mixing ratio (ppb) to mass concentration (ug m-3)
         CiTmc = c_cbl(CiT%loc) * mr2mc_PRODT 
@@ -1847,19 +1847,19 @@ implicit none
 
         kISORO2NO  = RC(R_ISORO2NO%loc)%Keff_cbl / convcbl  ! convert from cm3/molec*s to ppb/s
         kISORO2HO2 = RC(R_ISORO2HO2%loc)%Keff_cbl / convcbl ! convert from cm3/molec*s to ppb/s
-        kTERPRO2NO = 8.7e-12 ! reaction rate for NO + C2H5O2 at 298K
-        kTERPRO2HO2= 8.0e-12 ! reaction rate for HO2 + C2H5O2 at 298K
+        kTERPRO2NO = 8.7d-12 ! reaction rate for NO + C2H5O2 at 298K
+        kTERPRO2HO2= 8.0d-12 ! reaction rate for HO2 + C2H5O2 at 298K
 
         select case(low_high_NOx)    ! low/high NOx branching of SVOC yields (Lane'08, ES&T)
           case(0) ! calculate branching ratio beta = rate_of_RO2+NO/(rate_of_RO2+NO + rate_of_RO2+HO2)
             beta_iso    = (kISORO2NO*c_cbl(NO%loc)) / (kISORO2NO*c_cbl(NO%loc) + kISORO2HO2*c_cbl(HO2%loc))
             beta_terp   = (kTERPRO2NO*c_cbl(NO%loc)) / (kTERPRO2NO*c_cbl(NO%loc) + kTERPRO2HO2*c_cbl(HO2%loc))
           case(1) ! only low NOx channel yields
-            beta_terp = 0. 
-            beta_iso  = 0.
+            beta_terp = 0._dp 
+            beta_iso  = 0._dp
           case(2) ! only high NOx channel yields
-            beta_terp = 1. 
-            beta_iso  = 1.
+            beta_terp = 1._dp 
+            beta_iso  = 1._dp
           case default
             if (t==1) print *,'Flag for the function of high/low NOx branching is invalid: ',low_high_NOx
             stop 'change function'
@@ -1880,18 +1880,18 @@ implicit none
         C4mc    = C4Tmc 
  
         ! T-dependence following Clausius-Clapeyron (Sheehan and Bowman '01)
-        C1_st    = C10_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh)) 
-        C2_st    = C20_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
-        C3_st    = C30_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
-        C4_st    = C40_st * (T0/T_hh)*exp((dHvap/Rgas)*(1./T0-1./T_hh))
+        C1_st    = C10_st * (T0/T_hh)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_hh)) 
+        C2_st    = C20_st * (T0/T_hh)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_hh))
+        C3_st    = C30_st * (T0/T_hh)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_hh))
+        C4_st    = C40_st * (T0/T_hh)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_hh))
         m        = 0 
         Coait    = OAbgb  
-        epsi = 1.
-        do while (epsi>1e-10) ! set iteration tolerance here
-             X1          = 1./((1.+(C1_st/Coait)))                                                                                         
-             X2          = 1./((1.+(C2_st/Coait)))
-             X3          = 1./((1.+(C3_st/Coait)))
-             X4          = 1./((1.+(C4_st/Coait)))
+        epsi = 1._dp
+        do while (epsi>1d-10) ! set iteration tolerance here
+             X1          = 1._dp/((1._dp+(C1_st/Coait)))                                                                                         
+             X2          = 1._dp/((1._dp+(C2_st/Coait)))
+             X3          = 1._dp/((1._dp+(C3_st/Coait)))
+             X4          = 1._dp/((1._dp+(C4_st/Coait)))
              Coait_new   = X1*C1mc + X2*C2mc + X3*C3mc + X4*C4mc + OAbgb                  
              epsi         = abs(Coait-Coait_new) ! optimization parameter
              Coait       = Coait_new      
@@ -1937,18 +1937,18 @@ implicit none
         C4mc_ft  = C4Tmc_ft
      
         ! T-dependence following Clausius-Clapeyron (Sheehan and Bowman '01)
-        C1_st_ft    = C10_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft)) 
-        C2_st_ft    = C20_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
-        C3_st_ft    = C30_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
-        C4_st_ft    = C40_st * (T0/T_ft)*exp((dHvap/Rgas)*(1./T0-1./T_ft))
+        C1_st_ft    = C10_st * (T0/T_ft)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_ft)) 
+        C2_st_ft    = C20_st * (T0/T_ft)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_ft))
+        C3_st_ft    = C30_st * (T0/T_ft)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_ft))
+        C4_st_ft    = C40_st * (T0/T_ft)*exp((dHvap/Rgas)*(1._dp/T0-1._dp/T_ft))
         m        = 0 
         Coait_ft = OAbgb_ft  
-        epsi_ft = 1.
-        do while (epsi>1e-10) ! set iteration tolerance here
-             X1_ft          = 1./((1.+(C1_st_ft/Coait_ft)))
-             X2_ft          = 1./((1.+(C2_st_ft/Coait_ft)))
-             X3_ft          = 1./((1.+(C3_st_ft/Coait_ft)))
-             X4_ft          = 1./((1.+(C4_st_ft/Coait_ft)))
+        epsi_ft = 1._dp
+        do while (epsi_ft>1d-10) ! set iteration tolerance here
+             X1_ft          = 1._dp/((1._dp+(C1_st_ft/Coait_ft)))
+             X2_ft          = 1._dp/((1._dp+(C2_st_ft/Coait_ft)))
+             X3_ft          = 1._dp/((1._dp+(C3_st_ft/Coait_ft)))
+             X4_ft          = 1._dp/((1._dp+(C4_st_ft/Coait_ft)))
              Coait_new_ft   = X1_ft*C1mc_ft + X2_ft*C2mc_ft + X3_ft*C3mc_ft + X4_ft*C4mc_ft + OAbgb_ft                  
              epsi_ft         = abs(Coait_ft-Coait_new_ft) ! optimization parameter
              Coait_ft       = Coait_new_ft      
@@ -1977,7 +1977,7 @@ implicit none
 
       write (60,'(2F14.4,5F14.4,8E15.5)') thour,printhour, zi(2) &
         ,qm(2), dq(2), wqe, wqs, betaq &
-        ,cm(2), dc(2), wce, wcs, betac, q2*1000., wqm*1000.
+        ,cm(2), dc(2), wce, wcs, betac, q2*1000, wqm*1000
 
       if(llandsurface)then
         write (61,'(12F14.5)') thour,printhour,Swin, &
@@ -2013,8 +2013,8 @@ implicit none
         endif
 
         write (47,'(2F14.4,6(E14.5),f8.1)') &
-        thour,printhour,6000. * RC(R_1%loc)%Keff_cbl, 60. * RC(R_NO2%loc)%Keff_cbl,&
-               6000.*RC(R_CH2O%loc)%Keff_cbl,photo, zenith,Q_cbl(RH%loc), zenith*180/pi
+        thour,printhour,6000._dp * RC(R_1%loc)%Keff_cbl, 60._dp * RC(R_NO2%loc)%Keff_cbl,&
+               6000._dp*RC(R_CH2O%loc)%Keff_cbl,photo, zenith,Q_cbl(RH%loc), zenith*180/pi
 
         write (48,formatstring) &
           thour,printhour,(c_ft(k),k=1,nchsp)
@@ -2183,23 +2183,25 @@ implicit none
 end
 
 double precision function E1(x)
+use modchem , only : dp
 implicit none
   double precision x
   double precision E1sum, factorial
   integer k,t
 
-  E1sum = 0.0
+  E1sum = 0.0_dp
   do k=1,99
-    E1sum = E1sum + (-1.0) ** (k + 0.0) * x ** (k + 0.0) / ( (k + 0.0) * factorial(k) )
+    E1sum = E1sum + (-1.0_dp) ** (k + 0.0_dp) * x ** (k + 0.0_dp) / ( (k + 0.0_dp) * factorial(k) )
   end do
-  E1 = -0.57721566490153286060 - log(x) - E1sum
+  E1 = -0.57721566490153286060_dp - log(x) - E1sum
 end
 
 double precision function factorial(k)
+use modchem , only : dp
 implicit none
   integer k
   integer n
-  factorial = 1.0
+  factorial = 1.0_dp
   do n = 2, k
     factorial = factorial * n
   enddo
