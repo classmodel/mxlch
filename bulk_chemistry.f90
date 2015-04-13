@@ -1915,7 +1915,7 @@ implicit none
         m        = 0 
         Coait_ft = OAbgb_ft  
         epsi_ft = 1.
-        do while (epsi>1e-10) ! set iteration tolerance here
+        do while (epsi_ft>1e-10) ! set iteration tolerance here
              X1_ft          = 1./((1.+(C1_st_ft/Coait_ft)))
              X2_ft          = 1./((1.+(C2_st_ft/Coait_ft)))
              X3_ft          = 1./((1.+(C3_st_ft/Coait_ft)))
