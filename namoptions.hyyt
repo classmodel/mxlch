@@ -1,0 +1,101 @@
+&NAMRUN
+outdir          = 'outhyyt'
+time            = 39600
+dtime           = 60
+atime           = 60
+atime_vert      = 1800
+h_max           = 3000
+latt            = 61.85
+long            = 24.28
+day             = 220
+hour            = 5.8
+/
+
+&NAMDYN
+zi0             = 200.0
+beta            = 0.20
+lenhancedentrainment = .false.
+wsls            = 0.000
+lfixedlapserates = .true.
+wthetasmax      = 0.11
+c_fluxes        = .false.
+gamma           = 0.0035
+thetam0         = 288.0
+dtheta0         = 0.4
+advtheta        = 0.0 
+pressure        = 998.0
+wqsmax          = 0.06
+gammaq          = -0.0024
+qm0             = 8.0
+dq0             = -1.75
+advq            = 0.0 
+lencroachment   = .false.
+ladvecFT        = .false.
+wcsmax          = 0.0
+gammac          = 0.0
+cm0             = 0.0
+dc0             = 0.0
+c_ustr          = .false.
+z0              = 0.0
+uws0            = 0
+vws0            = 0
+gammau          = 0
+gammav          = 0
+um0             = 0
+vm0             = 0
+ug              = 0
+vg              = 0
+/
+
+&NAMCHEM
+lchem           = .true.
+lcomplex        = .false.
+lwritepl        = .true.
+ldiuvar         = .true.          
+h_ref           = 12.
+lflux           = .false.
+fluxstart       = 0.0
+fluxend         = 0.0
+lchconst        = .false.
+t_ref_cbl       = 298.
+p_ref_cbl       = 1000
+q_ref_cbl       = 10.0
+t_ref_ft        = 298.
+p_ref_ft        = 1000.
+q_ref_ft        = 10.0
+!pressure_ft     = 1013.0
+/
+
+&NAMFLUX
+offset_wt       = 0
+offset_wq       = 0
+function_wt     = 2
+function_wq     = 2
+starttime_wt    = 0
+endtime_wt      = 39600
+starttime_wq    = 0
+endtime_wq      = 39600
+starttime_chem  = 0
+endtime_chem    = 39600
+!starttime_adv   = sunrise
+!endtime_adv     = sunset
+/
+
+&NAMSOA
+lvbs         = .true.
+low_high_NOx = 1
+alpha1_TERP_low  = 0.107
+alpha2_TERP_low  = 0.092
+alpha3_TERP_low  = 0.359
+alpha4_TERP_low  = 0.600
+alpha1_TERP_high = 0.012
+alpha2_TERP_high = 0.122
+alpha3_TERP_high = 0.201
+alpha4_TERP_high = 0.500
+alpha1_ISO_low   = 0.009
+alpha2_ISO_low   = 0.030
+alpha3_ISO_low   = 0.015
+alpha1_ISO_high  = 0.001
+alpha2_ISO_high  = 0.023
+alpha3_ISO_high  = 0.015
+/

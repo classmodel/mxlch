@@ -1,0 +1,168 @@
+&NAMRUN
+outdir          = 'outop3'
+time            = 27000
+dtime           = 1
+atime           = 60
+atime_vert      = 1800
+h_max           = 3000
+latt            = 4.98
+long            = 117.84
+day             = 188
+hour            = -1.5
+/
+
+&NAMDYN
+zi0             = 300.0
+beta            = 0.20
+lenhancedentrainment = .false.
+wsls            = 3e-5
+lfixedlapserates = .true.
+wthetasmax      = 0.30
+c_fluxes        = .false.
+gamma           = 0.003
+lgamma          = .true. 
+hcrit           = 800
+gamma2          = 0.0095
+thetam0         = 298.0
+dtheta0         = 5.5
+advtheta        = -3e-4 
+pressure        = 950.0
+wqsmax          = 0.16
+gammaq          = -0.0026
+qm0             = 11.5
+dq0             = -0.1
+advq            = 0 
+lencroachment   = .false.
+ladvecFT        = .false.
+wcsmax          = 0.0
+gammac          = 0.0
+cm0             = 0.0
+dc0             = 0.0
+c_ustr          = .false.
+z0              = 0.5
+uws0            = 0
+vws0            = 0
+gammau          = 0
+gammav          = 0
+um0             = 5.
+vm0             = 5.
+ug              = 0
+vg              = 0
+/
+
+&NAMCHEM
+lchem           = .true.
+lcomplex        = .false.
+lwritepl        = .true.
+ldiuvar         = .true.          
+h_ref           = 12.
+lflux           = .false.
+fluxstart       = 0.0
+fluxend         = 0.0
+lchconst        = .false.
+t_ref_cbl       = 298.
+p_ref_cbl       = 950
+q_ref_cbl       = 10.0
+t_ref_ft        = 298.
+p_ref_ft        = 950.
+q_ref_ft        = 10.0
+!pressure_ft     = 1013.0
+/
+
+&NAMFLUX
+offset_wt       = 0
+offset_wq       = 0
+function_wt     = 2
+function_wq     = 2
+starttime_wt    = 0
+endtime_wt      = 42000
+starttime_wq    = 0
+endtime_wq      = 42000
+starttime_chem  = 0
+endtime_chem    = 42000
+starttime_adv   = 9000
+endtime_adv     = 42000
+/
+
+&NAMSURFLAYER
+lsurfacelayer   = .false.
+z0m             = 0.05
+z0h             = 0.01
+/
+
+&NAMRAD
+lradiation = .false.
+cc         = 0.0
+S0         = 1376.
+albedo     = 0.27326
+/
+
+&NAMSURFACE
+llandsurface = .false.
+Qtot         = -1000000
+Ts           = 287.2
+wwilt        = 0.314
+w2           = 0.43
+wg           = 0.43
+wfc          = 0.491
+wsat         = 0.6
+CLa          = 0.083
+CLb          = 11.4
+CLc          = 12.0
+C1sat        = 0.342
+C2ref        = 0.3
+gD           = 0.0
+rsmin        = 110
+rssoilmin    = 50
+LAI          = 2
+cveg         = 1.0
+Tsoil        = 287.2
+T2           = 285.0
+Wl           = 0e-4
+Lambda       = 6
+CGsat        = 3.6e-6
+lrsAgs       = .false.
+lCO2Ags      = .false.
+CO2comp298   = 68.5
+Q10CO2       = 1.5
+gm298        = 7.0            
+Ammax298     = 2.2            
+Q10gm        = 2.0            
+T1gm         = 278.           
+T2gm         = 301.           
+Q10Am        = 2.0            
+T1Am         = 281.           
+T2Am         = 311.           
+f0           = 0.89           
+ad           = 0.07           
+alpha0       = 0.017          
+Kx           = 0.7            
+gmin         = 0.25e-3   
+Cw           = 0.0016
+wsmax        = 0.55  
+wsmin        = 0.005 
+R10          = 0.23  
+Eact0        = 53.3e3
+lBVOC        = .false.
+BaserateIso  = 300.
+BaserateTer  = 300.
+/
+
+&NAMSOA
+lvbs         = .true.
+low_high_NOx = 0
+alpha1_TERP_low  = 0.107
+alpha2_TERP_low  = 0.092
+alpha3_TERP_low  = 0.359
+alpha4_TERP_low  = 0.600
+alpha1_TERP_high = 0.012
+alpha2_TERP_high = 0.122
+alpha3_TERP_high = 0.201
+alpha4_TERP_high = 0.500
+alpha1_ISO_low   = 0.009
+alpha2_ISO_low   = 0.030
+alpha3_ISO_low   = 0.015
+alpha1_ISO_high  = 0.001
+alpha2_ISO_high  = 0.023
+alpha3_ISO_high  = 0.015
+/

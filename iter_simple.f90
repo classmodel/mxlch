@@ -26,6 +26,9 @@ else
    conv_ft =6.023e8 * pressure_ft / (Rfact*temp_ft)  ! =1 /6.77e-16/1000/60 = (6.023e23/e15)*P/RT
 endif
 
+convcbl = conv_cbl
+convft  = conv_ft
+
 !c
 !c   Calculation solar zenith angle according to LES
 !c
@@ -77,8 +80,8 @@ endif
          K = RC(i)%A * coszen ** RC(i)%B
          RC(i)%Keff_cbl = K * RC(i)%D *  c_cbl(H2O%loc)*1.e-9 / &
               (RC(i)%D * c_cbl(H2O%loc)*1.e-9  + RC(i)%E * (1.- c_cbl(H2O%loc)*1.e-9))
-         RC(i)%Keff_ft = K * RC(i)%D *  c_cbl(H2O%loc)* 1.e-9 / &
-              (RC(i)%D * c_cbl(H2O%loc)* 1.e-9 + RC(i)%E * (1.- c_cbl(H2O%loc)*1.e-9))
+         RC(i)%Keff_ft = K * RC(i)%D *  c_ft(H2O%loc)* 1.e-9 / &
+              (RC(i)%D * c_ft(H2O%loc)* 1.e-9 + RC(i)%E * (1.- c_ft(H2O%loc)*1.e-9))
        case default !if someone put by mistake a number
          RC(i)%Keff_cbl = 1
          RC(i)%Keff_ft  = 1
