@@ -93,7 +93,7 @@ implicit none
 !   dynamics
 
   logical :: c_ustr=.true.,c_wth=.false.,c_fluxes=.false., lencroachment=.false., ladvecFT=.false., lgamma=.false., lenhancedentrainment=.false., lfixedlapserates=.false., lfixedtroposphere=.false. !c_fluxes replaces c_wth
-  logical :: lradiation=.false.,lsurfacelayer=.false.,llandsurface=.false.,lrsAgs=.false., lCO2Ags=.false.
+  logical :: lradiation=.false.,lsurfacelayer=.false.,llandsurface=.false.,lrsAgs=.false., lCO2Ags=.false.,ldeltaeddington=.false.,lignoretrans=.false.
   double precision :: zi(2),zi0 = 200 ,thetam(2), dtheta(2),pressure = 1013.0, wthetae
   double precision temp_cbl, temp_ft
   integer :: runtime,t, time=24*3600.0,tt
@@ -136,8 +136,10 @@ implicit none
   double precision :: Ts !Skin temperature
   double precision :: thetasurf, qsurf, thetavsurf, thetav, Rib, L, L0, fx, Lstart, Lend, fxdif
   double precision :: T2m, q2m, u2m, v2m, esat2m , e2m, rh2m
+  double precision :: omega=0.9999,gaero=0.65 ! aerosol properties
   double precision :: Tr,Ta,costh !Needed for radiation calculation
   double precision :: Swin,Swout,Lwin,Lwout !Calculated radiations
+  double precision :: HRaero !heating rate in the aerosol layer
   double precision :: Cs = -1, Constm
   double precision :: esatsurf,qsatsurf,cq,rs=1.e6,ra,zsl,esat,qsat,rssoil
   double precision :: desatdT, dqsatdT, efinal, f1, f2, f3, f4, C1, C2, wgeq
@@ -333,13 +335,18 @@ implicit none
     z0h
 
   namelist/NAMRAD/ &
-    lradiation,& !radiation scheme to determine Q and SW
-    cc,&         !cloud cover
-    S0,&         !Incoming radiation
-    DeltaFsw,&   !Absorbed radiation by e.g. aerosols (neg. value)
-    DeltaFlw,&   !Emitted radiation by e.g. clouds (pos. value)
-    Rdistr,&     !Distribution of absorbing aerosols (see Barbaro et al., 2013)
-    albedo       !Surface albedo
+    lradiation,&      !radiation scheme to determine Q and SW
+    cc,&              !cloud cover
+    S0,&              !Incoming radiation
+    lignoretrans,&    !Set Tr to 1, ignoring transitivity
+    DeltaFsw,&        !Absorbed radiation by e.g. aerosols (neg. value)
+    DeltaFlw,&        !Emitted radiation by e.g. clouds (pos. value)
+    Rdistr,&          !Distribution of absorbing aerosols (see Barbaro et al., 2013)
+    albedo,&          !Surface albedo
+    ldeltaeddington,& !Use Delta-Eddington method for radiative transfer
+    omega,&           !Single scattering albedo
+    tau,&             !Optical depth
+    gaero             !Assymetry factor
 
   namelist/NAMSURFACE/ &
     llandsurface,& !switch to use interactive landsurface
@@ -951,12 +958,27 @@ implicit none
 
 !   Start with radiation calculation
     if (lradiation) then
-      costh = max(0.0,cos(getth(1.0*day,latt,long,thour))) 
+      costh = max(0.0,cos(getth(1.0*day,latt,long,thour)))
       Ta    = thetam(1)*((((100*pressure)-zsl*rho*g)/(100*pressure))**(Rd/Cp))!pressure*100 to compensate for SI, 0.1 to get T at top of the SL
       Tr    = (0.6 + 0.2 * costh) * (1 - 0.4 * cc)
+      if (lignoretrans) Tr = 1.0
 
-      Swin  = S0 * Tr * costh + DeltaFsw
-      Swout = albedo * Swin
+      if(ldeltaeddington) then ! calculate SW up and down using the Delta-Eddington approximation
+        Swin   = S0 * Tr
+        if (costh > 0.0001) then ! For security - preventing crashes
+          call deltaeddington(costh,albedo,zi(1),tau,omega,gaero,DeltaFsw,Swout,Swin)
+        else
+          DeltaFsw = 0.0
+          Swin     = Swin * costh
+          Swout    = albedo * Swin
+        endif
+        HRaero = - 86400.0 * DeltaFsw / (rho * Cp * zi(1))  !K / day
+        DeltaF = DeltaFsw + DeltaFlw
+      else !ldeltaeddington
+        Swin   = S0 * Tr * costh + DeltaFsw
+        Swout  = albedo * Swin
+      endif !ldeltaeddington
+
       Lwin  = 0.8 * bolz * (Ta ** 4)
       Lwout = bolz * (Ts ** 4)
 
@@ -2203,4 +2225,86 @@ implicit none
   do n = 2, k
     factorial = factorial * n
   enddo
+end
+
+subroutine deltaeddington(mu,albedo,height,tau,omega,gaero,HR,swup,swdn) !calculate the irradiance that reaches the surface after interaction with a well-mixed aerosol layer
+implicit none
+!variable declaration
+  double precision mu,gaero,gcde,tauc,taucde
+  double precision taupath,c1,c2
+  double precision omega,omegade,ff,rk,rp,alpha,beta
+  double precision I1,I0,albedo,swup,swdn,height,tauray,swdnTOP,swupTOP
+  integer k
+
+  double precision swu,swd
+  double precision tau,taude,sw1,HR
+
+  sw1 = swdn ! SW at the top of the layer
+
+  tauc = tau ! tau deppending on the namelist tau
+  ff=gaero*gaero
+  gcde=gaero/(1.+gaero)
+  taucde=(1.0-omega*ff)*tauc
+  omegade=(1.0-ff)*omega/(1.0-omega*ff)
+  taude = (1.0-omega*ff)*taude
+  
+  tauray = 0.09 ! typical Rayleigh scattering (555nm)
+  taupath = tauray + taude ! free atmosphere + aerosols in the CBL
+
+  call DEconstants(omegade,gcde,taupath,albedo,mu,c1,c2,rk,rp,alpha,beta) 
+
+! to calculate rad at the CBL's top - only considers rayleigh scattering
+  I0 = sw1*(c1*exp(-rk*tauray) + c2*exp(rk*tauray) - alpha*exp(-tauray/mu))   ! Shettle & Weinmann JAS 1976
+  I1 = sw1*(rp*(c1*exp(-rk*tauray)-c2*exp(rk*tauray)) - beta*exp(-tauray/mu)) ! Shettle & Weinmann JAS 1976
+  swdnTOP = ((I0 + (2./3.)*I1) + mu*sw1*exp(-tauray/mu))
+  swupTOP = (I0  - (2./3.)*I1)
+
+  I0 = sw1*(c1*exp(-rk*taupath) + c2*exp(rk*taupath) - alpha*exp(-taupath/mu))   ! Shettle & Weinmann JAS 1976
+  I1 = sw1*(rp*(c1*exp(-rk*taupath)-c2*exp(rk*taupath)) - beta*exp(-taupath/mu)) ! Shettle & Weinmann JAS 1976
+
+  swd = ((I0 + (2./3.)*I1) + mu*sw1*exp(-taupath/mu)) ! total down
+  swu = (I0  - (2./3.)*I1)                            ! diffuse up (lambertian)
+
+  swup = swu !surface value SWUP
+  swdn = swd !surface value SWDN
+
+  HR = - ((swdnTOP - swupTOP) - (swdn-swup))
+
+  return
+end
+
+subroutine DEconstants(omegade,gcde,taucde,albedo,mu,c1,c2,rk,rp,alpha,beta)
+implicit none
+!variables declaration
+  double precision mu,gaero,gcde,taucde
+  double precision t1,t2,t3,c1,c2
+  double precision omegade,x1,x2,x3,rk,mu2,rp,alpha,beta,rtt
+  double precision exmu0,expk,exmk,xp23p,xm23p,ap23b,albedo
+  
+
+! the  solution of the eddington equations are given by Shettle & Weinmann JAS 1976 
+    x1=1.0-omegade*gcde
+    x2=1.0-omegade
+    rk=sqrt(3.0*x2*x1)
+    mu2=mu*mu
+    x3=4.0*(1.0-rk*rk*mu2)
+    rp=sqrt(3.0*x2/x1)
+    alpha=3.e0*omegade*mu2*(1.0+gcde*x2)/x3
+    beta=3.*omegade*mu*(1.0+3.0*gcde*mu2*x2)/x3
+
+    rtt=2.0/3.0
+    exmu0= exp(-taucde/mu)
+    expk=  exp(rk*taucde)
+    exmk=1.0/expk
+    xp23p=1.0+rtt*rp
+    xm23p=1.0-rtt*rp
+    ap23b=alpha+rtt*beta
+
+    t1=1-albedo-rtt*(1.+albedo)*rp
+    t2=1-albedo+rtt*(1.+albedo)*rp
+    t3=(1-albedo)*alpha-rtt*(1+albedo)*beta+albedo*mu
+    c2=(xp23p*t3*exmu0-t1*ap23b*exmk)/(xp23p*t2*expk-xm23p*t1*exmk)
+    c1=(ap23b-c2*xm23p)/xp23p
+
+  return
 end
