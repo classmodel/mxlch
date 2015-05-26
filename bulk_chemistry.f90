@@ -1056,7 +1056,7 @@ implicit none
 
           Rdark    = (1.0/9) * Am
 
-          PAR      = 0.40*max(0.1,Swin*cveg)
+          PAR      = 0.40*max(0.1,Swin)
 
           ! calculate  light use efficiency
           alphac   = alpha0 * (co2abs - CO2comp) / (co2abs + 2 * CO2comp)
