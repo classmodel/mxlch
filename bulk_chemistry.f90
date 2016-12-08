@@ -171,6 +171,29 @@ implicit none
   double precision :: ev,tempd,templcl,zlcl,RHlcl
   integer          :: ii
 
+  ! Define variables and constants for fluxes isotoplogues
+  logical          :: lisotopes=.false. 
+  double precision :: theta_eq = 0.75                                !0.96
+  ! C13
+
+  double precision :: bc13=27, deltac13_r=-22.
+  double precision :: Rsc13 = 0.0112372 !Farqhuar based on (c13/c12)
+  double precision :: eps_k13, cippb, deltac13, delta_atmc13o2, diff, wdeltac13_p, wdeltac13_r, wdeltac13 , wc13_p, wc13_r
+  ! COO18
+  
+  double precision :: Rscoo18 = 0.0020671,  delta_x = -5.
+  double precision :: alpha_eq, eps_eq, eps_kw, eps_k18, delta_atmcoo18, delta_lw, delta_e18
+  double precision :: delta_coo18, wdeltacoo18_p, wdeltacoo18_r, wdeltacoo18
+  double precision :: esurf, rhsurf 
+  double precision :: delta_s18 = -22. ! IMPORTANT need to check with Lee (now equal to deltac13_r)
+  double precision :: eps_ks18, csppb, ccppb, diffcoo18_r
+  ! HOO18 
+  
+  double precision :: Rshoo18 = 0.0020052,  delta_xw = -5.
+  double precision :: delta_atmhoo18, wdeltahoo18_p, wdeltahoo18_r, wdeltahoo18
+  double precision :: LEvegppb, LEsoilppb 
+  
+
  ! define variables for G/P-partitioning
   logical          :: lvbs=.false. 
   integer m, low_high_NOx
@@ -369,7 +392,7 @@ implicit none
     CGsat,&        !Saturated soil conductivity for heat
     lrsAgs,&       !Switch to use A-gs model for surface resistances
     lCO2Ags,&      !Switch to use A-gs model for CO2 flux
-    CO2comp298,&   !CO2 compensation concentration [mg m-3]
+    CO2comp298,&   !CO2 compensation concentration [ppm]
     Q10CO2,&       !function parameter to calculate CO2 compensation concentration [-]
     gm298   ,&     !mesophyill conductance at 298 K [mm s-1]
     Ammax298,&     !CO2 maximal primary productivity [mg m-2 s-1]
@@ -411,6 +434,11 @@ implicit none
     t_ref_ft  ,&
     p_ref_ft  ,&
     q_ref_ft
+  
+  ! option for the isotopologues of carbon dioxide and water paour 
+  namelist/NAMISOTOPES/ &
+    lisotopes , &
+    theta_eq 
 
   ! options for changes in the surface fluxes
   namelist/NAMFLUX/ &
@@ -548,6 +576,10 @@ implicit none
   if (ierr > 0) stop 'ERROR: Problem in namoptions'
   close(1)
   open (1, file='namoptions')
+  read (1,NAMISOTOPES,iostat=ierr)
+  if (ierr > 0) stop 'ERROR: Problem in namoptions'
+  close(1)
+  open (1, file='namoptions')
   read (1,NAMSURFACE,iostat=ierr)
   if (ierr > 0) stop 'ERROR: Problem in namoptions'
   close(1)
@@ -618,6 +650,30 @@ implicit none
     print *,""
     print *,""
   endif
+  if ( lisotopes .and. (.not. lchem ))  then
+    print *,""
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,"You enabled lisotopes without enabling lchem!"
+    print *,"Please check your namelist options."
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,""
+  endif
+  if ( lisotopes .and. (.not. lrsAgs )) then
+    print *,""
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,"You enabled lisotopes without enabling lrsAgs!"
+    print *,"Please check your namelist options."
+    print *,""
+    print *,"!!!!!!!!!!!!!!!!!!!!!"
+    print *,""
+    print *,""
+  endif
 
 
   write(formatstring,'(a,a)')'mkdir ',trim(outdir)
@@ -657,6 +713,7 @@ implicit none
   write (*,*) 'daystart',startdaytime/3600.
   write (*,*) 'dayend  ',enddaytime/3600.
   write (*,*) 'daylength',daylength/3600.
+  write (*,*) 'LISOTOPES=', lisotopes
 
   ! DEPRECATED: USE NAMELIST NAMFLUX to set individually
   ! if lfux then we use startflux and endflux times
@@ -879,6 +936,23 @@ implicit none
        write (48,'(I4)') time/atime
        write (48,formatstring) 'UTC(hours)','RT(hours)',(PL_scheme(k)%name,k=1,nchsp)
 
+    if (lisotopes) then
+      open (49, file=trim(outdir)//dirsep//'flux_iso')
+         write (49, '(a4)') 'CHEM'
+         write (49,'(I4)') time/atime
+         write (49,'(9a14)') 'UTC(hours)','RT(hours)','wco2','wc13','wc13_p','wc13_r','wcoo18','wh2o', 'whoo18'
+
+      open (51, file=trim(outdir)//dirsep//'iso_delta')
+         write (51, '(a10)') 'DELTA FLUX'
+         write (51,'(I4)') time/atime
+         write (51,'(8a14)') 'UTC(hours)','RT(hours)','wdelta-c13','wdelta-c18','wdelta-w','delta-c13','delta-c18','delta-w'
+
+      open (52, file=trim(outdir)//dirsep//'fraction')
+         write (52, '(a12)') 'FRACTIONING'
+         write (52,'(I4)') time/atime
+         write (52,'(8a14)') 'UTC(hours)','RT(hours)','eps_k13','eps_k18','eps_kw','eps_ks18','delta_lw'
+    endif
+
     open ( 62, file =trim(outdir)//dirsep//'keff_cbl')
       write(formatstring,'(A,i3,A4)')'(',tnor+3,'A13)' !+3 id for 2 times and tem_cbl
       write (62,formatstring) 'UTC(hours)','RT(hours)','Temp_cbl',(RC(k)%rname,k=1,tnor)
@@ -931,7 +1005,6 @@ implicit none
   write (*,*) ' '
   write (*,*) ' checking the initialisation c_cbl c_ft0 emis at t=0'
 
-! write (*,*) specname(i_R), c_cbl(i_R), c_ft0(i_R ),Q(i_R )
 
 ! dynamics
 
@@ -1127,7 +1200,7 @@ implicit none
             ! calculate surface resistances using plant physiological (A-gs) model
             ! calculate CO2 compensation concentration
             CO2comp  = CO2comp298 * Q10CO2 ** ( 0.1 * (thetasurf - 298.0) )
-            CO2comp  = CO2comp * rho
+            CO2comp  = CO2comp * (MW_CO2/MW_Air)* rho
 
             ! calculate mesophyll conductance
             gm       = gm298 * Q10gm ** (0.1 * (thetasurf - 298.0) ) / ( (1. + exp(0.3 * (T1gm - thetasurf))) * (1. + exp(0.3 * (thetasurf - T2gm))))
@@ -1423,8 +1496,88 @@ implicit none
         else
           wcs            = wco2 * 1000 !conversion from ppm m/s to ppb m/s
         endif
+
+        if(lisotopes) then
+!
+!     Calculating emission flux C13O2
+!      plant 
+          cippb          =  ci* (MW_Air/MW_CO2)*(1.0/rho) * 1000.                              ! in ppb
+          eps_k13        =  4.4*rsCO2/(ra + rsCO2)                                             ! permil
+          deltac13       =  eps_k13 + (bc13 - eps_k13)*(cippb/c_cbl(CO2%loc))                  ! permil 
+          wdeltac13_p    = -(((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  /c_cbl(CO2%loc))*deltac13 ! flux permil m s-1
+
+!      soil
+          delta_atmc13o2 =  (((c_cbl(C13%loc)/c_cbl(CO2%loc))/Rsc13) - 1.) * 1000.
+          diff           =  deltac13_r -delta_atmc13o2
+          wdeltac13_r    =  (((Resp*1000.)*(MW_Air/MW_CO2)*(1.0/rho))/c_cbl(CO2%loc))*diff     ! flux permil m s-1
+
+!     net flux
+          wdeltac13      = wdeltac13_p + wdeltac13_r                                           ! flux permil m s-1 
+
+!     wc13 in ppb m/s by plant (wc13_p), soil (wc13_r) and total Q_cbl(C13%loc)
+          wc13_p         = (c_cbl(C13%loc)/c_cbl(CO2%loc))*((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  + &
+                           (Rsc13/1000.) * c_cbl(CO2%loc) * wdeltac13_p
+          wc13_r         = (c_cbl(C13%loc)/c_cbl(CO2%loc))*((Resp*1000.)*(MW_Air/MW_CO2)*(1.0/rho))+ &
+                           (Rsc13/1000.) * c_cbl(CO2%loc) * wdeltac13_r
+          Q_cbl(C13%loc) = (c_cbl(C13%loc)/c_cbl(CO2%loc))*Q_cbl(CO2%loc) + (Rsc13/1000.) * c_cbl(CO2%loc) * wdeltac13 ! ppb m s-1
+
+!     Calculating emission flux COO18 
+!      plant 
+          alpha_eq       = exp((1137./(Ts**2)) - (0.4156/Ts) - 2.0667e-03)
+          eps_eq         = (1 - (1./alpha_eq)) * 1000.                                          ! permil
+          eps_kw         = 32.*rsAgs/(ra + rsAgs)                                               ! permil NB:we assume r_b equal 0
+          eps_k18        = 8.8*rsCO2/(ra + rsCO2)                                               ! permil NB:we assume r_b equal 0
+          delta_atmcoo18 =  (((c_cbl(COO18%loc)/c_cbl(CO2%loc))/Rscoo18) - 1.) * 1000.          ! permil
+!      calculating rh at the surface
+          esatsurf       = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
+          esurf          = qsurf * 1.e-3 * (100*pressure) / 0.622                               !HGO factor for qsurf which is in g/kg
+          rhsurf         = esurf / esatsurf
+
+          delta_lw       = delta_x + eps_eq + eps_kw + rhsurf*(delta_atmcoo18 - eps_kw - delta_x) * alpha_eq ! permil
+
+          delta_e18      = delta_lw + (17604/Ts) - 17.93                                          !permil
+          ccppb          = c_cbl(CO2%loc) + ((An*1000.)  *(MW_Air/MW_CO2)*(1.0/rho))*(rsAgs + ra) !ppb
+!          delta_coo18    = (ccppb/(ccppb - c_cbl(CO2%loc)))*(delta_e18 - delta_atmcoo18)*theta_eq + &
+!                           (1 - theta_eq) * eps_k18 * (ccppb/c_cbl(CO2%loc)) - eps_k18            ! permil 
+          delta_coo18    = (cippb/(cippb - c_cbl(CO2%loc)))*(delta_e18 - delta_atmcoo18)*theta_eq + &
+                           (1 - theta_eq) * eps_k18 * (cippb/c_cbl(CO2%loc)) - eps_k18            ! permil 
+          wdeltacoo18_p  = (((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  /c_cbl(CO2%loc))*delta_coo18  ! flux permil m s-1
+      
+!      soil
+          eps_ks18       = 8.8 * rssoil/(rssoil + ra)                                            ! assuming boundary resistance 0
+          csppb          = c_cbl(CO2%loc) + ((Resp*1000.)*(MW_Air/MW_CO2)*(1.0/rho))*(rssoil + ra) 
+
+          diffcoo18_r    = (csppb/(csppb-c_cbl(CO2%loc)))*(delta_s18 - delta_atmcoo18) - eps_ks18 
+
+          wdeltacoo18_r  = (((Resp*1000.)*(MW_Air/MW_CO2)*(1.0/rho))/c_cbl(CO2%loc))*diffcoo18_r  ! flux per mil m s-1
+     
+!     net flux
+          wdeltacoo18      = wdeltacoo18_p + wdeltacoo18_r 
+          Q_cbl(COO18%loc) = (c_cbl(COO18%loc)/c_cbl(CO2%loc))*Q_cbl(CO2%loc) + &
+                             (Rscoo18/1000.) * c_cbl(CO2%loc) * wdeltacoo18                       ! ppb m s-1
+
+          write(*,*) cippb, ccppb, cippb/ccppb
+!     Calculating emission flux HOO18 
+!      plant 
+          c_cbl(H2O%loc) =  qm(1)* MW_Air/MW_H2O * 1e6                                            ! ppb
+          delta_atmhoo18 =  (((c_cbl(HOO18%loc)/c_cbl(H2O%loc))/Rshoo18) - 1.) * 1000.            ! per mil
+          LEvegppb       =  (LEveg/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                  ! ppb m/s
+          wdeltahoo18_p  =  (LEvegppb/c_cbl(H2O%loc))  * (delta_xw - delta_atmhoo18)              ! permil m/s
+
+!      soil
+          LEsoilppb      =  (LEsoil/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                 ! ppb m/s
+          wdeltahoo18_r  =  (LEsoilppb/c_cbl(H2O%loc)) * (delta_xw - delta_atmhoo18)              ! permil m/s
+
+!     net flux
+          wdeltahoo18      = wdeltahoo18_p + wdeltahoo18_r
+          Q_cbl(H2O%loc)   = (LE/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                    ! ppb m s-1
+          Q_cbl(HOO18%loc) = (c_cbl(HOO18%loc)/c_cbl(H2O%loc))*Q_cbl(H2O%loc) + &
+                             (Rshoo18/1000.) * c_cbl(H2O%loc) * wdeltahoo18                       ! ppb m s-1
+    
+        endif
       endif
-      !HGO if lCO2Ags, then calculate wCO2 @ CO2%loc apart lchem and CO2%loc
+
+        !HGO if lCO2Ags, then calculate wCO2 @ CO2%loc apart lchem and CO2%loc
       !.gt. 0
       if (lBVOC) then
         if(lchem .and. (TERP%loc .gt. 0) ) then
@@ -1770,6 +1923,7 @@ implicit none
         else
           beta_ft(k)=E(k)/Q_cbl(k)
         endif
+        
       enddo
        
       if(lchconst .eqv. .true.)then
@@ -1786,6 +1940,7 @@ implicit none
         c_ft(H2O%loc)=(qm(2)+ dq(2))* MW_Air/MW_H2O * 1e6
       endif
 
+!      write(*,*) qm(2), c_cbl(H2O%loc)
       if(lcomplex) then
         call calc_K_mozart(pressure, real(temp_cbl + (zi(2)/2) * gammad), real(temp_ft + zi(2) * gammad) ) !Accounting for dry adiabatic lapse rate
       else
@@ -2019,8 +2174,19 @@ implicit none
         write (48,formatstring) &
           thour,printhour,(c_ft(k),k=1,nchsp)
 
-        write(formatstring,'(A,i3,A)') '(3F13.4,',tnor,'E13.4)'
-        write (62,formatstring),thour,printhour,temp_cbl, (RC(k)%Keff_cbl,k=1,tnor)
+        if(lisotopes)then
+          write (49,'(2F14.4,7(E14.5))')&
+          thour,printhour,Q_cbl(CO2%loc),Q_cbl(C13%loc), wc13_p, wc13_r, Q_cbl(COO18%loc), Q_cbl(H2O%loc), Q_cbl(HOO18%loc)
+        
+          write (51,'(2F14.4,8(E14.5))')&
+          thour,printhour,wdeltac13, wdeltacoo18,wdeltahoo18,delta_atmc13o2,delta_atmcoo18,delta_atmhoo18
+
+          write (52,'(2F14.4,8(E14.5))')&
+          thour,printhour,eps_k13, eps_k18,eps_kw,eps_ks18,delta_lw
+        endif
+
+!       write(formatstring,'(A,i3,A)') '(3F13.4,',tnor,'E13.4)'
+!       write (62,formatstring),thour,printhour,temp_cbl, (RC(k)%Keff_cbl,k=1,tnor)
 
         if(lwritepl) then
           do i=1,nchsp
@@ -2120,6 +2286,8 @@ implicit none
   endif
   close (46)
   close (47)
+  close (48)
+  close (49)
   close (50)
   close (51)
   close (60)

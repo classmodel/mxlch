@@ -78,7 +78,7 @@ implicit none
           ! the above 2 statements only work correctly with intel fortran
 
       i=1
-      do while (len_trim(spec(i))>0 .and. i<25)
+      do while (len_trim(spec(i))>0 .and. i<15)
         ! print *,i, spec(i),len_trim(spec(i))
         i=i+1
       end do
@@ -707,6 +707,9 @@ implicit none
   OAbg%name   = 'OAbg'
   CiT%name    = 'CiT'
   CiI%name    = 'CiI'
+  C13%name    = 'C13'
+  COO18%name  = 'COO18'
+  HOO18%name  = 'HOO18'
   
   !set all 0 elements to 1. incase we do calculations with unknown componets
   c_cbl(0)=0.
@@ -741,11 +744,14 @@ implicit none
     if (NH3%name   == chem_name(i)) then ; NH3%loc  = i;  cycle; endif
     if (H2SO4%name == chem_name(i)) then ; H2SO4%loc  = i;  cycle; endif
     if (INERT%name == chem_name(i)) then ; INERT%loc  = i;  cycle; endif
-    if (PRODUC%name == chem_name(i)) then ; PRODUC%loc  = i;  cycle; endif
-    if (TERP%name == chem_name(i)) then ; TERP%loc  = i;  cycle; endif
-    if (OAbg%name == chem_name(i)) then ; OAbg%loc  = i;  cycle; endif
-    if (CiT%name == chem_name(i)) then ; CiT%loc  = i; cycle; endif
-    if (CiI%name == chem_name(i)) then ; CiI%loc  = i; cycle; endif   
+    if (PRODUC%name == chem_name(i))then ; PRODUC%loc  = i;  cycle; endif
+    if (TERP%name == chem_name(i))  then ; TERP%loc  = i;  cycle; endif
+    if (OAbg%name == chem_name(i))  then ; OAbg%loc  = i;  cycle; endif
+    if (CiT%name == chem_name(i))   then ; CiT%loc  = i; cycle; endif
+    if (CiI%name == chem_name(i))   then ; CiI%loc  = i; cycle; endif   
+    if (C13%name == chem_name(i))   then ; C13%loc  = i; cycle; endif   
+    if (COO18%name == chem_name(i)) then ; COO18%loc  = i; cycle; endif   
+    if (HOO18%name == chem_name(i)) then ; HOO18%loc  = i; cycle; endif   
   enddo
 
   read(10,'(a)',err=400)scalarline
@@ -781,11 +787,14 @@ implicit none
 
   read(10,'(a)',err=400)scalarline
   read(scalarline,*)(adv_chem_cbl(j),j=1,nchsp)
-
+  
   read(10,'(a)',err=400)scalarline
+  write(*,*) scalarline
   read(scalarline,*)(adv_chem_ft(j),j=1,nchsp)
-
+  
+  goto 501
   400  print *, 'error in reading advection in inputchem'
+  501  print *,''
 
   end subroutine
 
