@@ -418,7 +418,7 @@ implicit none
         icoeff(3) = int(reactions(react_nr)%inp(3)%coeff +0.05)
         icoeff(4) = int(reactions(react_nr)%inp(4)%coeff +0.05)
         select case(reactions(react_nr)%nr_chem_inp)
-		case (1) !the loss comp is the only reactant
+        case (1) !the loss comp is the only reactant
           select case (icoeff(1))
             case (1)
               PL_scheme(i)%PL(j)%formula = 0
@@ -519,7 +519,7 @@ implicit none
                   PL_scheme(i)%PL(j)%exp3  = icoeff(3) -1
                 endif
             end select
-		   endif
+          endif
         case (4) !we have 4 components on input
           if( reactions(react_nr)%inp(k)%name == PL_scheme(i)%name) then ! current selected
             PL_scheme(i)%PL(j)%formula = 7
@@ -546,7 +546,7 @@ implicit none
                 PL_scheme(i)%PL(j)%coef = reactions(react_nr)%inp(4)%coeff
             end select
           endif
- 	    end select
+        end select
       enddo
       endif
     enddo
@@ -769,11 +769,11 @@ implicit none
   H2O%name    = 'H2O'
   CO%name     = 'CO'
   CO2%name    = 'CO2'
-!  RH%name     = 'ISOP'
+  RH%name     = 'ISOP'
   R%name      = 'R'
   NH3%name    = 'NH3'
   H2SO4%name  = 'H2SO4'
-  ISO%name    = 'ISOP'
+  ISO%name    = 'ISO'
 
   !set all 0 elements to 1. incase we do calculations with unknown componets
   c_cbl(0)=1.
@@ -796,7 +796,7 @@ implicit none
     if (H2O%name   == chem_name(i)) then ; H2O%loc  = i;  cycle; endif
     if (CO%name    == chem_name(i)) then ; CO%loc   = i;  cycle; endif
     if (CO2%name   == chem_name(i)) then ; CO2%loc  = i;  cycle; endif
-!    if (RH%name    == chem_name(i)) then ; RH%loc   = i;  cycle; endif
+    if (RH%name    == chem_name(i)) then ; RH%loc   = i;  cycle; endif
     if (ISO%name   == chem_name(i)) then ; ISO%loc  = i;  cycle; endif
     if (R%name     == chem_name(i)) then ; R%loc    = i;  cycle; endif
     if (NH3%name   == chem_name(i)) then ; NH3%loc  = i;  cycle; endif

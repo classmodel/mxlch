@@ -21,7 +21,7 @@ OBJECTS     = \
    iter_mozart.o
    
 
-MXLCH_SOA : $(OBJECTS)
+MXLCH : $(OBJECTS)
 	$(fc) $(FCFLAGS) -o $@ $(OBJECTS)
 
 modchem.o  : modchem.f90
@@ -43,7 +43,7 @@ inputchem_mozart.o : inputchem_mozart.f90
 	$(fc) $(FCFLAGS) -c  inputchem_mozart.f90
 
 clean:
-	rm -f *.o *.mod MXLCH_SOA
+	rm -f *.o *.mod MXLCH
 
 
 

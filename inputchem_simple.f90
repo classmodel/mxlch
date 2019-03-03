@@ -4,8 +4,8 @@ subroutine inputchem_simple(inputchemfile,outdir,dirsep)
 use modchem
 implicit none
 
-  character*25 inputchemfile
-  character*25 outdir
+  character(len=*) :: inputchemfile
+  character(len=*) ::outdir
   character*1  dirsep
 
   integer i,j,k,l,react,max_reactions
@@ -46,7 +46,7 @@ implicit none
       call allocate_arrays()         ! allocate space
           allocate(chem_name(nchsp))
     elseif (line(1:1) == '@') then
-      call read_chem_simple(chem_name)
+      call read_chem_simple(chem_name,line)
     elseif (line(1:1)=='A')then !Advection
       call read_advection()
     elseif (len(trim(line))== 0)then
@@ -69,9 +69,9 @@ implicit none
           !sees a end of line but xlf(Huygens) and gfortran don't stop and reads garbage
           !so we fill all with spaces and test later which are filled
       do i=1,15
-        spec(i)='           '
-      enddo
-
+        spec(i)='        '
+      enddo 
+     
       read(line,*,end=300)reactconst,rname,raddep,func1,(fact(j),j=1,7),(spec(j),j=1, 15)
   300    j=j-1
       nr_chemcomp = (j+1)/2
@@ -362,7 +362,7 @@ implicit none
         icoeff(3) = int(reactions(react_nr)%inp(3)%coeff +0.05)
         icoeff(4) = int(reactions(react_nr)%inp(4)%coeff +0.05)
         select case(reactions(react_nr)%nr_chem_inp)
-		case (1) !the loss comp is the only reactant
+        case (1) !the loss comp is the only reactant
           select case (icoeff(1))
             case (1)
               PL_scheme(i)%PL(j)%formula = 0
@@ -463,7 +463,7 @@ implicit none
                   PL_scheme(i)%PL(j)%exp3  = icoeff(3) -1
                 endif
             end select
-		   endif
+          endif
         case (4) !we have 4 components on input
           if( reactions(react_nr)%inp(k)%name == PL_scheme(i)%name) then ! current selected
             PL_scheme(i)%PL(j)%formula = 7
@@ -490,7 +490,7 @@ implicit none
                 PL_scheme(i)%PL(j)%coef = reactions(react_nr)%inp(4)%coeff
             end select
           endif
- 	    end select
+        end select
       enddo
       endif
     enddo
@@ -676,14 +676,16 @@ implicit none
   120  continue
   end SUBROUTINE
 
-  subroutine read_chem_simple(chem_name)
+  subroutine read_chem_simple(chem_name, line)
   use modchem
   implicit none
 
   character*6 ,dimension(nchsp)::chem_name
+  character*255 line
   character*255 scalarline
   integer i,j,status
 
+  print *,'***********reading read_chem_simple******'
   INERT%name  = 'INERT'
   PRODUC%name = 'PRODUC'
   O3%name     = 'O3'
@@ -698,15 +700,35 @@ implicit none
   H2O%name    = 'H2O'
   CO%name     = 'CO'
   CO2%name    = 'CO2'
-!  RH%name     = 'ISO'
+  ISO%name     = 'ISO'
   R%name      = 'R'
   NH3%name    = 'NH3'
   H2SO4%name  = 'H2SO4'
-  ISO%name    = 'ISO'
+  !ISO%name    = 'ISO'
   TERP%name   = 'TERP'
   OAbg%name   = 'OAbg'
-  CiT%name    = 'CiT'
-  CiI%name    = 'CiI'
+  !CiT%name    = 'CiT'
+  !CiI%name    = 'CiI'
+  !SO2%name    = 'SO2'
+  !ANH4%name   = 'ANH4'
+  !ANO3%name   = 'ANO3'
+  !AH2O%name   = 'AH2O'
+  !BC%name     = 'BC'
+  ISOPOOH%name = 'ISOPOOH'
+  IEPOX%name  = 'IEPOX'
+  IEPOXSOA%name = 'IEPOXSOA'
+  APIN%name   = 'APIN'
+  BPIN%name   = 'BPIN'
+  LIMO%name   = 'LIMO'
+  APOH%name   = 'APOH'
+  BPOH%name   = 'BPOH'
+  LIOH%name   = 'LIOH'
+  APO3%name   = 'APO3'
+  BPO3%name   = 'BPO3'
+  LIO3%name   = 'LIO3'
+  APNO3%name   = 'APNO3'
+  BPNO3%name   = 'BPNO3'
+  LINO3%name   = 'LINO3'
   
   !set all 0 elements to 1. incase we do calculations with unknown componets
   c_cbl(0)=0.
@@ -718,9 +740,36 @@ implicit none
   adv_chem_cbl(0)=0.0
   adv_chem_ft(0)=0.0
 
-  !chem species
-  read(10,'(a)',end=400)scalarline
-  read(scalarline,*)(chem_name(j),j=1,nchsp)  !#
+   !chem species
+  print *, line
+  if (line(2:2) == '@') then
+          do i=1,nchsp
+            read(10,*) j,chem_name(i),c_cbl(i),c_ft(i),Q_init(i),Q_func(i), adv_chem_cbl(i),adv_chem_ft(i)
+            write(6,'(i3,x,a5,x,3E13.5,i4,2E13.5)') i,chem_name(i),c_cbl(i),c_ft(i),Q_init(i),Q_func(i), adv_chem_cbl(i), adv_chem_ft(i)
+            Q_cbl(i) = Q_init(i)
+
+          enddo
+  else
+          read(10,'(a)',end=400)scalarline
+          read(scalarline,*)(chem_name(j),j=1,nchsp)  !#
+
+          read(10,'(a)',err=400)scalarline
+          read(scalarline,*)(c_cbl(j),j=1,nchsp)
+
+          read(10,'(a)',err=400)scalarline
+          read(scalarline,*)(c_ft(j),j=1,nchsp)
+
+          read(10,'(a)',err=400)scalarline
+          read(scalarline,*)(Q_init(j),j=1,nchsp)
+          Q_cbl = Q_init
+
+          read(10,'(a)',err=400)scalarline
+          read(scalarline,*)(Q_func(j),j=1,nchsp)
+
+          do i=1,nchsp
+            write(6,'(i3,x,a5,x,3E13.5,i4)') i,chem_name(i),c_cbl(i),c_ft(i),Q_init(i),Q_func(i)
+          enddo
+  endif
 
   do i=1, nchsp
     if (O3%name    == chem_name(i)) then ; O3%loc   = i;  cycle; endif
@@ -735,35 +784,41 @@ implicit none
     if (H2O%name   == chem_name(i)) then ; H2O%loc  = i;  cycle; endif
     if (CO%name    == chem_name(i)) then ; CO%loc   = i;  cycle; endif
     if (CO2%name   == chem_name(i)) then ; CO2%loc  = i;  cycle; endif
-!    if (RH%name    == chem_name(i)) then ; RH%loc   = i;  cycle; endif
-    if (ISO%name   == chem_name(i)) then ; ISO%loc  = i;  cycle; endif
+    if (ISO%name    == chem_name(i)) then ; ISO%loc   = i;  cycle; endif
+    !if (ISO%name   == chem_name(i)) then ; ISO%loc  = i;  cycle; endif
     if (R%name     == chem_name(i)) then ; R%loc    = i;  cycle; endif
     if (NH3%name   == chem_name(i)) then ; NH3%loc  = i;  cycle; endif
     if (H2SO4%name == chem_name(i)) then ; H2SO4%loc  = i;  cycle; endif
     if (INERT%name == chem_name(i)) then ; INERT%loc  = i;  cycle; endif
     if (PRODUC%name == chem_name(i)) then ; PRODUC%loc  = i;  cycle; endif
-    if (TERP%name == chem_name(i)) then  ; TERP%loc  = i;  cycle; endif
+    if (TERP%name == chem_name(i)) then ; TERP%loc  = i;  cycle; endif
     if (OAbg%name == chem_name(i)) then ; OAbg%loc  = i;  cycle; endif
-    if (CiT%name == chem_name(i)) then ; CiT%loc  = i; cycle; endif
-    if (CiI%name == chem_name(i)) then ; CiI%loc  = i; cycle; endif   
+    !if (CiT%name == chem_name(i)) then ; CiT%loc  = i; cycle; endif
+    !if (CiI%name == chem_name(i)) then ; CiI%loc  = i; cycle; endif
+    if (ISOPOOH%name == chem_name(i)) then ; ISOPOOH%loc = i; cycle; endif
+    if (IEPOX%name == chem_name(i)) then ; IEPOX%loc = i; cycle; endif 
+    if (IEPOXSOA%name == chem_name(i)) then ; IEPOXSOA%loc = i; cycle; endif  
+    !if (SO2%name == chem_name(i)) then ; SO2%loc  = i; cycle; endif   
+    !if (ANH4%name == chem_name(i)) then ; ANH4%loc  = i; cycle; endif   
+    !if (ANO3%name == chem_name(i)) then ; ANO3%loc  = i; cycle; endif   
+    !if (AH2O%name == chem_name(i)) then ; AH2O%loc  = i; cycle; endif   
+    !if (BC%name == chem_name(i)) then ; BC%loc  = i; cycle; endif   
+    if (APIN%name == chem_name(i)) then ; APIN%loc  = i; cycle; endif   
+    if (BPIN%name == chem_name(i)) then ; BPIN%loc  = i; cycle; endif   
+    if (LIMO%name == chem_name(i)) then ; LIMO%loc  = i; cycle; endif   
+    if (APOH%name == chem_name(i)) then ; APOH%loc  = i; cycle; endif   
+    if (APO3%name == chem_name(i)) then ; APO3%loc  = i; cycle; endif   
+    if (APNO3%name == chem_name(i)) then ; APNO3%loc  = i; cycle; endif   
+    if (BPOH%name == chem_name(i)) then ; BPOH%loc  = i; cycle; endif   
+    if (BPO3%name == chem_name(i)) then ; BPO3%loc  = i; cycle; endif   
+    if (BPNO3%name == chem_name(i)) then ; BPNO3%loc  = i; cycle; endif   
+    if (LIOH%name == chem_name(i)) then ; LIOH%loc  = i; cycle; endif   
+    if (LIO3%name == chem_name(i)) then ; LIO3%loc  = i; cycle; endif   
+    if (LINO3%name == chem_name(i)) then ; LINO3%loc  = i; cycle; endif   
+    if (ISO3%name == chem_name(i)) then ; ISO3%loc  = i; cycle; endif   
+    if (ISNO3%name == chem_name(i)) then ; ISNO3%loc  = i; cycle; endif   
   enddo
 
-  read(10,'(a)',err=400)scalarline
-  read(scalarline,*)(c_cbl(j),j=1,nchsp)
-
-  read(10,'(a)',err=400)scalarline
-  read(scalarline,*)(c_ft(j),j=1,nchsp)
-
-  read(10,'(a)',err=400)scalarline
-  read(scalarline,*)(Q_init(j),j=1,nchsp)
-  Q_cbl = Q_init
-
-  read(10,'(a)',err=400)scalarline
-  read(scalarline,*)(Q_func(j),j=1,nchsp)
-
-  do i=1,nchsp
-    write(6,'(i3,x,a5,x,3E13.5)') i,chem_name(i),c_cbl(i),Q_cbl(i),c_ft(i)
-  enddo
 
   goto 500
   400  print *, 'error in reading chem species in inputchem'

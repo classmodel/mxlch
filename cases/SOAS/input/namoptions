@@ -1,0 +1,237 @@
+&NAMRUN
+outdir          = 'newnew'
+time            = 37800
+dtime           = 1
+atime           = 60
+atime_vert      = 1800
+h_max           = 3000
+latt            = 32.70
+long            = 272.75
+day             = 162
+hour            = 12
+/
+
+&NAMDYN
+zi0             = 400.0
+beta            = 0.2
+!lenhancedentrainment = .false.
+wsls            = 9.0e-6
+!lfixedlapserates = .true.
+wthetasmax      = 0.10
+c_fluxes        = .false.
+gamma           = 0.002
+!gamma          = 0.003
+lgamma         = .true.
+hcrit          = 1150
+gamma2         = 0.005
+!thetam0        = 295.8
+thetam0         = 296.6 
+dtheta0         = 1.2
+advtheta        = 5.0e-04
+pressure        = 1005.1
+!wqsmax         = 0.15
+wqsmax          = 0.15
+!gammaq         = -0.004
+gammaq          = -0.005
+qm0             = 16.8 
+!dq0            = -4.0
+dq0             = -2.0
+advq            = 1.5e-4
+lencroachment   = .false.
+ladvecFT        = .true.
+wcsmax          = -0.36
+gammac          = 0.0
+cm0             = 392
+dc0             = -30.0
+c_ustr          = .false.
+z0              = 0.15
+uws0            = 0
+vws0            = 0
+gammau          = 0
+gammav          = 0
+um0             = 1
+vm0             = 1
+ug              = 0
+vg              = 0
+lscu            = .false.
+lrelaxdz        = .false.
+
+/
+
+&NAMCHEM
+lchem           = .true.
+lcomplex        = .false.
+lwritepl        = .true.
+ldiuvar         = .true.
+h_ref           = 12.
+lflux           = .false.
+fluxstart       = 5.
+fluxend         = 17.
+lchconst        = .false.
+t_ref_cbl       = 298.
+p_ref_cbl       = 1000
+q_ref_cbl       = 10.0
+t_ref_ft        = 298.
+p_ref_ft        = 1000.
+q_ref_ft        = 10.0
+!pressure_ft     = 1013.0
+/
+
+&NAMFLUX
+offset_wt       = 0
+offset_wq       = 0
+function_wt     = 2
+function_wq     = 2
+starttime_wt    = 1044
+endtime_wt      = 37800
+starttime_wq    = 0
+endtime_wq      = 43200
+starttime_chem  = 0
+!switchtime_chem = 7200
+!switchtime_chem = 7200
+endtime_chem    = 45000
+starttime_adv_T = 0
+endtime_adv_T   = 7200
+!endtime_adv_T   = 6800
+starttime_adv_q = 0
+endtime_adv_q   = 14400
+/
+
+&NAMSURFLAYER
+lsurfacelayer   = .true.
+z0m             = 2 
+z0h             = 2
+/
+
+&NAMRAD
+lradiation = .true.
+cc         = 0.0
+S0         = 1380
+albedo     = 0.25
+/
+
+&NAMSURFACE
+llandsurface = .true.
+Qtot         = 400
+Ts           = 298.6
+w2           = 0.22
+wg           = 0.29
+wwilt        = 0.171
+wfc          = 0.323
+wsat         = 0.472
+CLa          = 0.219
+CLb          = 4.9
+CLc          = 4.0
+C1sat        = 0.132
+C2ref        = 1.8
+gD           = 0.03
+rsmin        = 200
+rssoilmin    = 20 
+LAI          = 5
+cveg         = 0.9
+Tsoil        = 294.6
+T2           = 293.6
+Wl           = 0e-4
+Lambda       = 20 
+CGsat        = 3.56e-6
+lrsAgs       = .true.
+lCO2Ags      = .false.
+CO2comp298   = 68.5
+Q10CO2       = 1.5
+gm298        = 7.0
+Ammax298     = 2.2
+Q10gm        = 2.0
+T1gm         = 278.
+T2gm         = 301.
+Q10Am        = 2.0
+T1Am         = 281.
+T2Am         = 311.
+f0           = 0.89
+ad           = 0.07
+alpha0       = 0.017
+Kx           = 0.7
+gmin         = 0.25e-3
+Cw           = 0.0016
+wsmax        = 0.55
+wsmin        = 0.005
+R10          = 0.23
+Eact0        = 53.3e3
+lBVOC        = .true.
+BaserateIso  = 7900.
+BaserateTer  = 860.
+/
+
+
+&NAMSOA
+lvbs         = .true.
+low_high_NOx = 3
+alpha1_APOHlow  = 0.08
+alpha2_APOHlow  = 0.019
+alpha3_APOHlow  = 0.18
+alpha4_APOHlow  =  0.03
+alpha1_BPOHlow  =  0.08
+alpha2_BPOHlow  = 0.019
+alpha3_BPOHlow  = 0.18
+alpha4_BPOHlow  = 0.03
+alpha1_APO3low =  0.08
+alpha2_APO3low  = 0.019
+alpha3_APO3low  = 0.18
+alpha4_APO3low  = 0.03
+alpha1_BPO3low  = 0.08
+alpha2_BPO3low  = 0.019
+alpha3_BPO3low  = 0.18
+alpha4_BPO3low  =  0.03
+alpha1_APNO3  = 0
+alpha2_APNO3  = 0
+alpha3_APNO3  = 0
+alpha4_APNO3  = 0
+alpha1_BPNO3 = 0
+alpha2_BPNO3  = 0
+alpha3_BPNO3  = 0.321
+alpha4_BPNO3  =  1.083
+alpha1_APOHhigh = 0.04
+alpha2_APOHhigh = 0.0095
+alpha3_APOHhigh = 0.09
+alpha4_APOHhigh = 0.015
+alpha1_BPOHhigh = 0.04
+alpha2_BPOHhigh = 0.0095
+alpha3_BPOHhigh = 0.09
+alpha4_BPOHhigh =  0.015
+alpha1_APO3high = 0.04
+alpha2_APO3high = 0.0095
+alpha3_APO3high = 0.09
+alpha4_APO3high = 0.015
+alpha1_BPO3high = 0.04
+alpha2_BPO3high = 0.0095
+alpha3_BPO3high = 0.09
+alpha4_BPO3high = 0.015
+alpha1_LIOHlow  = 0
+alpha2_LIOHlow  = 0.366
+alpha3_LIOHlow  = 0.321
+alpha4_LIOHlow  = 0.817
+alpha2_ISO3low   = 0.031
+alpha3_ISO3low   = 0.000
+alpha4_ISO3low   = 0.095
+alpha1_LIO3low  = 0
+alpha2_LIO3low  = 0.366
+alpha3_LIO3low  = 0.321
+alpha4_LIO3low  = 0.817
+alpha2_ISNO3   = 0
+alpha3_ISNO3   = 0.217
+alpha4_ISNO3   = 0.092
+alpha1_LINO3  = 0
+alpha2_LINO3  = 0.000
+alpha3_LINO3  = 0.321
+alpha4_LINO3  =  1.083
+alpha1_LIOHhigh = 0
+alpha2_LIOHhigh = 0.474
+alpha3_LIOHhigh = 0.117
+alpha4_LIOHhigh = 1.419
+alpha2_ISO3high  = 0.001
+alpha3_ISO3high  = 0.023
+alpha4_ISO3high  = 0.015
+alpha1_LIO3high = 0
+alpha2_LIO3high = 0.474
+alpha3_LIO3high = 0.117
+alpha4_LIO3high = 1.419
+/
