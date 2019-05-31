@@ -174,27 +174,20 @@ implicit none
   ! Define variables and constants for fluxes isotoplogues
   logical          :: lisotopes=.false. 
   ! C13
-!  double precision :: theta_eq = 0.75           ! Soybean
   double precision :: theta_eq = 0.96            ! Forest (Grillon and Yakir)
-!  double precision :: bc13=27, deltac13_r=-22.
   double precision :: bc13=27, deltac13_r=-28.   ! I substitute the -22 by -28 following Ivar suggestion C3 plants
-!  double precision :: Rsc13 = 0.0112372 !Farqhuar based on (c13/c12)
-!  double precision :: Rsc13 = 0.0111797 ! Appendix A Wehr et al. (2013)
   double precision :: Rsc13 = 0.011057  ! It is adapted from Appendix A Wehr et al. (2013) as a function of total CO2
   double precision :: eps_k13, cippb, deltac13, delta_atmc13o2, diff, wdeltac13_p, wdeltac13_r, wdeltac13 , wc13_p, wc13_r
   double precision :: flc13_c, flc13_d 
   
   ! COO18
   double precision :: ccsppb
-!  double precision :: Rscoo18 = 0.0020671,  delta_x = -5.
   double precision :: Rscoo18 = 0.0020052,  delta_x = -5. !Appendix A Wehr(2013)
   double precision :: alpha_eq, eps_eq, eps_kw, eps_k18, delta_atmcoo18, delta_lw, delta_e18
-  double precision :: delta_coo18, wdeltacoo18_p, wdeltacoo18_r, wdeltacoo18
+  double precision :: delta_coo18, wdeltacoo18_p, wdeltacoo18_r, wdeltacoo18, wc18_p, wc18_r
   double precision ::  wdeltacoo18_ps, wdeltacoo18_s   ! Simplified version isoflux following H2O
   double precision :: esurf, rhsurf 
   double precision :: delta_xc18       ! Diurnal variability delta_x for isoflux
-!  double precision :: delta_s18 = -22. ! IMPORTANT need to check with Lee (now equal to deltac13_r)
-!  double precision :: delta_s18 = -28. ! IMPORTANT: To be consistent I follow change c13 frpm -22 to -28
   double precision :: delta_s18 = 30. ! IMPORTANT: To be consistent I follow change c13 frpm -22 to -28
   double precision :: eps_ks18, csppb, ccppb, diffcoo18_r
   double precision :: flcoo18_c, flcoo18_d 
@@ -952,12 +945,13 @@ implicit none
       open (49, file=trim(outdir)//dirsep//'flux_iso')
          write (49, '(a4)') 'CHEM'
          write (49,'(I4)') time/atime
-         write (49,'(9a14)') 'UTC(hours)','RT(hours)','wco2','wc13','wc13_p','wc13_r','wcoo18','wh2o', 'whoo18'
+         write (49,'(11a14)') 'UTC(hours)','RT(hours)','wco2','wc13','wc13_p','wc13_r','wcoo18','wc18_p','wc18_r','wh2o', 'whoo18'
 
       open (51, file=trim(outdir)//dirsep//'iso_delta')
          write (51, '(a10)') 'DELTA FLUX'
          write (51,'(I4)') time/atime
-         write (51,'(9a14)') 'UTC(hours)','RT(hours)','wdelta-c13','wdelta-c18','wdelta-w','delta-c13','delta-c18','delta-w','delta_xc18'
+         write (51,'(13a14)') 'UTC(hours)','RT(hours)','wdelta-c13','wdelta-c18','wdelta-w','delta-c13','delta-c18','delta-w','delta_xc18','delta_e18',&
+         'delta_e18T','rhsurf', 'Ts'
 
       open (52, file=trim(outdir)//dirsep//'fraction')
          write (52, '(a12)') 'FRACTIONING'
@@ -1532,8 +1526,8 @@ implicit none
 !
 !     Calculating emission flux C13O2
 !      plant 
-          cippb          =  ci*  (MW_Air/MW_CO2)*(1.0/rho) * 1000.                              ! in ppb
-          ccsppb         =  ccs* (MW_Air/MW_CO2)*(1.0/rho) * 1000.                              ! in ppb
+          cippb          =  ci*  (MW_Air/MW_CO2)*(1.0/rho) * 1000.                             ! in ppb
+          ccsppb         =  ccs* (MW_Air/MW_CO2)*(1.0/rho) * 1000.                             ! in ppb
           eps_k13        =  4.4*rsCO2/(ra + rsCO2)                                             ! permil
           deltac13       =  eps_k13 + (bc13 - eps_k13)*(cippb/c_cbl(CO2%loc))                  ! permil 
           wdeltac13_p    = -(((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  /c_cbl(CO2%loc))*deltac13 ! flux permil m s-1
@@ -1555,26 +1549,52 @@ implicit none
           flc13_d        = (Rsc13/1000.) * c_cbl(CO2%loc) * wdeltac13 
           Q_cbl(C13%loc) = (c_cbl(C13%loc)/c_cbl(CO2%loc))*Q_cbl(CO2%loc) + (Rsc13/1000.) * c_cbl(CO2%loc) * wdeltac13 ! ppb m s-1
 
-!     Calculating emission flux COO18 
+!     Calculating isoflux HOO18 
+!      plant 
+          c_cbl(H2O%loc) =  (qm(1)*1e-03)* MW_Air/MW_H2O * 1e9                                    ! ppb
+          delta_atmhoo18 =  (((c_cbl(HOO18%loc)/c_cbl(H2O%loc))/Rshoo18) - 1.) * 1000.            ! per mil
+          LEvegppb       =  (LEveg/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                  ! ppb m/s
+          wdeltahoo18_p  =  (LEvegppb/c_cbl(H2O%loc))  * (delta_xw - delta_atmhoo18)              ! permil m/s
+
+!      soil
+          LEsoilppb      =  (LEsoil/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                 ! ppb m/s
+          wdeltahoo18_r  =  (LEsoilppb/c_cbl(H2O%loc)) * (delta_xw - delta_atmhoo18)              ! permil m/s
+
+!     net flux
+          wdeltahoo18      = wdeltahoo18_p + wdeltahoo18_r
+          wdeltahoo18      = wdeltahoo18_p                                                        ! Soil evaporation is neglected (Lee 2009)
+          Q_cbl(H2O%loc)   = (LE/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                    ! ppb m s-1
+          flhoo18_c        = (c_cbl(HOO18%loc)/c_cbl(H2O%loc))*Q_cbl(H2O%loc)
+          flhoo18_d        = (Rshoo18/1000.) * c_cbl(H2O%loc) * wdeltahoo18
+          Q_cbl(HOO18%loc) = (c_cbl(HOO18%loc)/c_cbl(H2O%loc))*Q_cbl(H2O%loc) + &
+                             (Rshoo18/1000.) * c_cbl(H2O%loc) * wdeltahoo18                       ! ppb m s-1
+    
+        endif
+      endif
+
+!     Calculating isoflux COO18 
 !      plant 
           alpha_eq       = exp((1137./(Ts**2)) - (0.4156/Ts) - 2.0667e-03)
           eps_eq         = (1 - (1./alpha_eq)) * 1000.                                          ! permil
           eps_kw         = 32.*rsAgs/(ra + rsAgs)                                               ! permil NB:we assume r_b equal 0
           eps_k18        = 8.8*rsCO2/(ra + rsCO2)                                               ! permil NB:we assume r_b equal 0
-          delta_atmcoo18 =  (((c_cbl(COO18%loc)/(2*c_cbl(CO2%loc)))/Rscoo18) - 1.) * 1000.     ! permil Factor 2CO2 like A.14 (Wehr et al. 2013)
+          delta_atmcoo18 =  (((c_cbl(COO18%loc)/(2*c_cbl(CO2%loc)))/Rscoo18) - 1.) * 1000.      ! permil Factor 2CO2 like A.14 (Wehr et al. 2013)
 !      calculating rh at the surface
           esatsurf       = 0.611e3 * exp(17.2694 * (Ts - 273.16) / (Ts - 35.86))
           esurf          = qsurf * 1.e-3 * (100*pressure) / 0.622                                !HGO factor for qsurf which is in g/kg
           rhsurf         = esurf / esatsurf
 
-          delta_lw       = delta_x + eps_eq + eps_kw + rhsurf*(delta_atmcoo18 - eps_kw - delta_x) * alpha_eq ! permil
+!         JV Changing delta_atmcoo18 to delta_atmhoo18 water leaf calculation 10-05-2018 
+!         delta_lw       = delta_x + eps_eq + eps_kw + rhsurf*(delta_atmcoo18 - eps_kw - delta_x) * alpha_eq ! permil
+          delta_lw       = delta_x + eps_eq + eps_kw + rhsurf*(delta_atmhoo18 - eps_kw - delta_x) * alpha_eq ! permil
 
           delta_e18      = delta_lw + (17604/Ts) - 17.93                                          !permil
           ccppb          = c_cbl(CO2%loc) + ((An*1000.)  *(MW_Air/MW_CO2)*(1.0/rho))*(rsAgs + ra) !ppb
           delta_coo18    = (ccsppb/(ccsppb - c_cbl(CO2%loc)))*(delta_e18 - delta_atmcoo18)*theta_eq - &
                            (1 - theta_eq) * eps_k18 * (ccsppb/c_cbl(CO2%loc)) + eps_k18            ! permil 
 
-          delta_xc18     = 20.*sin(pi * (sec - daytime_start)/(daylength) +  (pi/4.)) + 25.        ! best fit with Wehr data
+
+          delta_xc18     = 25.*sin(pi * (sec - daytime_start)/(daylength) +  (pi/8.)) + 15.        ! best fit with Wehr data
 
           wdeltacoo18_p  = (((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  /c_cbl(CO2%loc))*delta_coo18  ! isoflux permil m s-1
           wdeltacoo18_ps=  (((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  /c_cbl(CO2%loc))*(delta_xc18 - delta_atmcoo18) ! isoflux permil m/s
@@ -1592,34 +1612,15 @@ implicit none
 !     net flux
           wdeltacoo18      = wdeltacoo18_p  + wdeltacoo18_r 
           wdeltacoo18_s    = wdeltacoo18_ps + wdeltacoo18_r 
+          wc18_p         = (c_cbl(COO18%loc)/c_cbl(CO2%loc))*((An*1000.)*(MW_Air/MW_CO2)*(1.0/rho))  + &
+                           (Rscoo18/1000.) * c_cbl(CO2%loc) * wdeltacoo18_p
+          wc18_r         = (c_cbl(COO18%loc)/c_cbl(CO2%loc))*((Resp*1000.)*(MW_Air/MW_CO2)*(1.0/rho))+ &
+                           (Rscoo18/1000.) * c_cbl(CO2%loc) * wdeltacoo18_r
+
           flcoo18_c        = (c_cbl(COO18%loc)/c_cbl(CO2%loc))*Q_cbl(CO2%loc)
           flcoo18_d        = (Rscoo18/1000.) * c_cbl(CO2%loc) * wdeltacoo18
           Q_cbl(COO18%loc) = (c_cbl(COO18%loc)/c_cbl(CO2%loc))*Q_cbl(CO2%loc) + &
                              (Rscoo18/1000.) * c_cbl(CO2%loc) * wdeltacoo18                       ! ppb m s-1
-
-!     Calculating emission flux HOO18 
-!      plant 
-          c_cbl(H2O%loc) =  (qm(1)*1e-03)* MW_Air/MW_H2O * 1e9                                    ! ppb
-          delta_atmhoo18 =  (((c_cbl(HOO18%loc)/c_cbl(H2O%loc))/Rshoo18) - 1.) * 1000.            ! per mil
-          LEvegppb       =  (LEveg/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                  ! ppb m/s
-          wdeltahoo18_p  =  (LEvegppb/c_cbl(H2O%loc))  * (delta_xw - delta_atmhoo18)              ! permil m/s
-
-!      soil
-          LEsoilppb      =  (LEsoil/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                 ! ppb m/s
-          wdeltahoo18_r  =  (LEsoilppb/c_cbl(H2O%loc)) * (delta_xw - delta_atmhoo18)              ! permil m/s
-
-!          write (*,*) delta_xw, delta_atmhoo18
-!     net flux
-          wdeltahoo18      = wdeltahoo18_p + wdeltahoo18_r
-          wdeltahoo18      = wdeltahoo18_p                                                        ! Soil evaporation is neglected (Lee 2009)
-          Q_cbl(H2O%loc)   = (LE/(rho*Lv))*(MW_Air/MW_H2O)*1e9                                    ! ppb m s-1
-          flhoo18_c        = (c_cbl(HOO18%loc)/c_cbl(H2O%loc))*Q_cbl(H2O%loc)
-          flhoo18_d        = (Rshoo18/1000.) * c_cbl(H2O%loc) * wdeltahoo18
-          Q_cbl(HOO18%loc) = (c_cbl(HOO18%loc)/c_cbl(H2O%loc))*Q_cbl(H2O%loc) + &
-                             (Rshoo18/1000.) * c_cbl(H2O%loc) * wdeltahoo18                       ! ppb m s-1
-    
-        endif
-      endif
 
         !HGO if lCO2Ags, then calculate wCO2 @ CO2%loc apart lchem and CO2%loc
       !.gt. 0
@@ -1732,7 +1733,7 @@ implicit none
       
       zi(2)  =zi(1)+(we+wf+ws-wm)*dtime            !eq (8)
       hcrit    = hcrit + ws * dtime
-      dtheta(2)=dtheta(1)+ ((gamma*(we + wf + wsubs))- &                            !extra subsidence by wm only affects dtheta (through gamma) if fixed tropospheric profiles are considered
+      dtheta(2)=dtheta(1)+ ((gamma*(we + wf + wsubs))- &                      !extra subsidence by wm only affects dtheta (through gamma) if fixed tropospheric profiles are considered
               (1/(zi(1)+inf))*(wthetas+(we+wf)*dtheta(1) - DeltaF/(rho*Cp) ))*dtime !eq. (3)
       if (.not. ladvecFT) dtheta(2) = dtheta(2) - lstheta*dtime
       thetam(2)=thetam(1)+ &
@@ -1758,7 +1759,6 @@ implicit none
 
 !    we = (zi(2)-zi(1))/dtime - ws
 
-! ---- Specific humidity
     if (beta /= 0) then
         wqe = -(we+wf)*dq(1)
         dq(2)=dq(1)+ ((gammaq*(we + wf + wsubs))-(1/(zi(1)+inf))*(wqs - wqe - (wqm*1000.)))*dtime   !eq. (3)
@@ -1955,14 +1955,16 @@ implicit none
 
     if(lchem) then
       do k=1, nchsp
+        
         E(k)=-(we+wf)*(c_ft(k)-c_cbl(k))
         c_cbl(k)=c_cbl(k)+(1/zi(1))*(Q_cbl(k)-E(k))*dtime
         c_cbl(k)=c_cbl(k)+adv_chem_cbl(k)*dtime
+
         if (k == 32) then
-          c_ft( k)= 17664.- 5.7e00*(zi(1)-zi0)
-        else
-          c_ft( k)=c_ft( k)+adv_chem_ft(k )*dtime
-        endif
+             c_ft( k)= 17644.- 5.7e00*(zi(1)-zi0)  ! value 5.7 is the gamma_ho180 
+       else
+         c_ft( k)=c_ft( k)+adv_chem_ft(k )*dtime
+       endif
         c_cbl(k) = max(0.0, c_cbl(k) )
         c_ft( k) = max(0.0, c_ft( k) )
 
@@ -2223,11 +2225,12 @@ implicit none
           thour,printhour,(c_ft(k),k=1,nchsp)
 
         if(lisotopes)then
-          write (49,'(2F14.4,7(E14.5))')&
-          thour,printhour,Q_cbl(CO2%loc),Q_cbl(C13%loc), wc13_p, wc13_r, Q_cbl(COO18%loc), Q_cbl(H2O%loc), Q_cbl(HOO18%loc)
+          write (49,'(2F14.4,9(E14.5))')&
+          thour,printhour,Q_cbl(CO2%loc),Q_cbl(C13%loc), wc13_p, wc13_r, Q_cbl(COO18%loc), wc18_p, wc18_r, Q_cbl(H2O%loc), Q_cbl(HOO18%loc)
         
-          write (51,'(2F14.4,9(E14.5))')&
-          thour,printhour,wdeltac13, wdeltacoo18,wdeltahoo18,delta_atmc13o2,delta_atmcoo18,delta_atmhoo18,delta_xc18
+          write (51,'(2F14.4,12(E14.5))')&
+          thour,printhour,wdeltac13, wdeltacoo18,wdeltahoo18,delta_atmc13o2,delta_atmcoo18,delta_atmhoo18,delta_xc18,delta_e18,&
+          delta_e18-delta_lw, rhsurf, Ts
 
           write (52,'(2F14.4,8(E14.5))')&
           thour,printhour,eps_k13, eps_k18,eps_kw,eps_ks18,delta_lw
