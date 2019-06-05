@@ -78,7 +78,7 @@ implicit none
           ! the above 2 statements only work correctly with intel fortran
 
       i=1
-      do while (len_trim(spec(i))>0 .and. i<25)
+      do while (len_trim(spec(i))>0 .and. i<15)
         ! print *,i, spec(i),len_trim(spec(i))
         i=i+1
       end do
@@ -785,7 +785,9 @@ implicit none
   read(10,'(a)',err=400)scalarline
   read(scalarline,*)(adv_chem_ft(j),j=1,nchsp)
 
+  goto 501
   400  print *, 'error in reading advection in inputchem'
+  501  print *, ''
 
   end subroutine
 
