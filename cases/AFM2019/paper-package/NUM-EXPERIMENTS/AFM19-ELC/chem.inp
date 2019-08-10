@@ -1,0 +1,100 @@
+# Input_chem starts with 1 line with a % with the total number of chemicals( inclusive INERT) and the number of reactions
+# the exact number of reactions is not inportant but it should be large enough
+# RJ 06/04/2012: HO2 + O3 reaction added
+# RJ 30/05/2012 SOA from isoprene
+# RJ 08/06/2012 OH + O3 reaction added
+# OP3 7th of July
+% 32 31
+# followed by a line with all the chemicals (output will be in the same order )
+# the line above it should start with a @ (No comments in between) 
+@  1       2       3       4      5      6      7     8     9    10    11    12    13    14    15     16     17   18   19    20    21    22    23    24     25    26    27   28      29    30     31      32
+  INERT    O3      O1D    NO     NO2    CH4   CH2O  CH3O2  MVK   ISO  IRO2   OH    HO2   CO    H2O   PRODUC  O2    N2  HNO3  H2O2  NO3   N2O5  TERP  CiT    OAbg  TRO2  X    CO2    CiI   C13    COO18   HOO18 
+   0.0     17.5    0.0    0.05   0.15  1800.   0.0   0.0   0.12  0.4   0.0   0.0   0.   100.   0.0   0.0    .2e09 .8e09  0.  0.0   0.    0.    0.08  0.0    0.6   0.0   0.0  389.0e3 0.0   4266.0 1619.8  17982.90       !CBL concentration
+   0.0     19.0    0.0    0.0    0.10  1800.   0.0   0.0   0.0   0.0   0.0   0.0   0.   100.   0.0   0.0    .2e09 .8e09  0.  0.0   0.    0.    0.0   0.0    0.6   0.0   0.0  380.5e3 0.0   4174.0 1585.0  17664.         !FT  conc.                 
+   1.0    -0.45    0.0    0.009  0.015  0.0    0.0   0.0   0.024 0.35  0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0     0.  0.0   0.    0.    0.04  0.024  0.0   0.0   0.0  0.0   0.024 0.0     0.0   0.0 !CBL emission         
+    1       2       0      1      5      0     0     0     5     2     0     0     0     0     0      0      0     0     0     0   0     0     2      5     0     0     0    0     5     0       0    0  !flux function
+#A
+#   0.0      0.0     0.0    0.0    0.0    0.0    0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0     0.0 0.0   0.0   0.0   0.0   0.0   0.0    0.0   0.0   0.0   0.0  0.0  0.0   0.0 !advection
+#   0.0      0.0     0.0    0.0    0.0    0.0    0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0   0.0     0.0 0.0   0.0   0.0   0.0   0.0   0.0    0.0   0.0   0.0   0.0  0.0  0.0   0.0 !advection
+# 0= no flux 1=constant flux during run, 2=sinusoidal, 3=constant from day start till day end,
+# 4= like a cosine or 5= dry deposition(specify Vd)
+#--------------------------------------------------------------------------------------------------------------                                
+# kr2nd  |Name  |Rad |func1|  A    |   B   |   C   |   D  |  E   |   F  |  G   | chemical reaction                                             
+#        |      |Dep |     |       |       |       |      |      |      |      | with inactive species                                         
+#        |5char |int |int  | real  | real  | real  | real | real | real | real |	 in ( )                                                    
+#---------------------------------------------------------------------------------------------------------------                               
+$
+2.e-5     R_01     1    2    3.83e-5   -.575  1.2    1.0      1.0    1.0    1.0   O3 + (hv)   -> O1D + O2
+1.0       R_02     0    2    1.63e-10    60   1.0    1.0      1.0    1.0    1.0   O1D + H2O   -> 2OH
+1.0       R_03     0    2    2.15e-11   110   1.0    1.0      1.0    1.0    1.0   O1D + N2    -> O3
+1.0       R_04     0    2    3.30e-11    55   1.0    1.0      1.0    1.0    1.0   O1D + O2    -> O3
+0.0167    R_05     1    2    1.67e-2   -.575  1.2    1.0      1.0    1.0    1.0   NO2 + (O2)  -> NO + O3
+1.0       R_06     1    2    1.47e-4   -.575  1.2    1.0      1.0    1.0    1.0   CH2O + (hv) -> HO2
+1.0       R_07     0    1    2.40e-13   1.0   1.0    1.0      1.0    1.0    1.0   OH + CO     -> HO2 + (CO2)
+1.0       R_08     0    2    2.45e-12 -1775.  1.0    1.0      1.0    1.0    1.0   OH + CH4    -> CH3O2
+1.0       R_09     0    2    2.70e-11   390   1.0    1.0      1.0    1.0    1.0   OH + ISO    -> IRO2 + CiI
+1.0       R_10     0    1    2.40e-11   1.0   1.0    1.0      1.0    1.0    1.0   OH + MVK    -> HO2 + CH2O
+1.0       R_11     0    2    4.80e-11  250    1.0    1.0      1.0    1.0    1.0   OH + HO2    -> H2O + (O2)
+1.0       R_12     0    2    2.90e-12 -160    1.0    1.0      1.0    1.0    1.0   OH + H2O2   -> H2O + HO2
+1.0       R_13     0    2    3.50e-12  250.   1.0    1.0      1.0    1.0    1.0   HO2 + NO    -> OH + NO2
+1.0       R_14     0    2    2.8e-12   300.   1.0    1.0      1.0    1.0    1.0   CH3O2 + NO  -> HO2 + NO2 + CH2O
+1.0       R_15     0    1    1.00e-11   1.0   1.0    1.0      1.0    1.0    1.0   IRO2 + NO   -> HO2 + NO2 + 0.6MVK + CH2O
+1.0       R_16     0    2    5.50e-12   125   1.0    1.0      1.0    1.0    1.0   OH + CH2O   -> HO2
+1.0       R_17     0    6    2.20e-13   600  1.9e-33 980    1.4e-21 2200    1.0   2HO2        -> H2O2 + (O2)
+1.0       R_18     0    2    4.10e-13   750   1.0    1.0      1.0    1.0    1.0   CH3O2 + HO2 -> PRODUC
+1.0       R_19     0    1    1.50e-11   750   1.0    1.0      1.0    1.0    1.0   IRO2 + HO2  -> 0OH + PRODUC 
+1.0       R_20     0    2    3.50e-12   340   1.0    1.0      1.0    1.0    1.0   OH + NO2    -> HNO3
+1.0       R_21     0    2    3.00e-12  -1500  1.0    1.0      1.0    1.0    1.0   NO + O3     -> NO2 + (O2)
+1.0       R_22     0    2    1.8e-11   110    1.0    1.0      1.0    1.0    1.0   NO + NO3    -> 2NO2
+1.0       R_23     0    2    1.4e-13  -2470   1.0    1.0      1.0    1.0    1.0   NO2 + O3    -> NO3 + O2
+1.0       R_24     0    4    3.6e-30  -4.1    0.0    1.9e-12  0.2    0.0    .35   NO2 + NO3   -> N2O5
+1.0       R_25     0    5    1.3e-3   -3.5   -11000  9.7e14   0.1  -11080   .35   N2O5        -> NO3 + NO2
+1.0       R_26     0    2    2.5e-22   0.0    1.0    1.0      1.0    1.0    1.0   N2O5 + H2O  -> 2HNO3
+1.0       R_27     0    7    1.8e-39   1.0    0.0    0.0      1.0    1.0    1.0   N2O5 + 2H2O -> 2HNO3 + H2O
+1.0       R_28     0    3    2.03e-16  300.   4.57   693.     1.0    1.0    1.0   HO2 + O3    -> OH + 2O2
+1.0       R_29     0    2    5.0e-16   -530   1.0    1.0      1.0    1.0    1.0   TERP + O3   -> CiT 
+1.0       R_30     0    2    1.21e-11  436    1.0    1.0      1.0    1.0    1.0   TERP + OH   -> CiT 
+1.0       R_31     0    2    1.30e-12  -956   1.0    1.0      1.0    1.0    1.0   OH + O3     -> HO2 + O2
+
+$ end of chemical reactions specified by $ as first character on line
+# for terpenes & isoprene: a1, a2, a3, a4 from Tsimpidi'10, ACP; 
+# for terpenes: A, B from Atkinson'03, Chem. Rev., but watch out: they use K=A*exp(-B/T) !!! so all B values have to change sign!
+
+#5.0667e-6  R_O3   1    4   6.29e-5   2.412   0.7  2.2e-10  2.9e-11  1.0    1.0   O3         -> 2HO + (O2)
+#0.0167     R_NO2  1    2   1.67e-2   -.575   1.2    1.0     1.0     1.0    1.0   NO2 + (O2) -> NO + O3
+#1.0       R_30     0    1    8.7e-12   1.0    1.0    1.0      1.0    1.0    1.0   TRO2 + NO   -> PRODUC 
+#1.0       R_31     0    1    8.0e-12   1.0    1.0    1.0      1.0    1.0    1.0   TRO2 + HO2  -> C2H5OOH + (O2)
+#1.0       R_09     0    1    1.00e-10   1.0   1.0    1.0      1.0    1.0    1.0   OH + ISO    -> IRO2 + 0.009C1I + 0.030C2I + 0.015C3I
+#1.0       R_32     0    2    3.50e-12  250.   1.0    1.0      1.0    1.0    1.0   HO2 + X     -> OH 
+
+#   function = 0 => Meaning K colum kn2rd in PPB*sec no temp dependence
+#   function = 1 => K = A (cm3/molecule*sec) no temp dependence
+#            MEANING of A..G         K = A
+#   function = 2 => K = K (cm3/molecule*sec)
+#            MEANING of A..G         K = A * exp (B/T)
+#   function = 3 => K = K (cm3/molecule*s)
+#            MEANING of A..G         K = A * (T/B)^C * exp (D/T)
+#   function = 4 => K = K'* K"/(K'+ K")* G (cm3/molecule*sec)
+#            MEANING of A..G         K'= A * (T/300)^B * exp(C/T)[M]     K" = D * (T/300)^E * exp(F/T)   Fc = G
+#   function = 5 => K = K'* K"/(K'+ K")* G (/sec)
+#            MEANING of A..G         K'= A * (T/300)^B * exp(C/T)[M]     K" = D * (T/300)^E * exp(F/T)   Fc = G
+#   function = 6 => K =  (K'+ K")*(1+K'") (cm3/molecule*s)
+#            special for 2HO2 ->H2O2 + (O2) because if fact there are 2 reactions
+#            MEANING of A..G         K'= A * exp (B/T)   K"= C * exp(D/T)[M]  K'" = 1 + E * exp(F/T)[H20]
+#   function = 7 => K = K (cm6/molecule2*s)for above R63Ab reaction K = A * (T/1)^0 * exp(0/T)=A*1*1 = A
+#            MEANING of A..G         K = A * (T/B)^C * exp (D/T)
+
+# function for photolysis reactions
+#   function = 0 => ! constant independent of sza, K read from colum kn2rd
+#            Keff = kn2rd
+#   function = 1 => ! constant independent of sza
+#            Keff = A
+#   function = 2 =>) ! exponential function
+#            Keff = A * exp(B / coszen)
+#   function = 3 => ! powerfunction
+#            Keff = A * coszen ** B
+#   function = 4 => ! powerfunction but special for JO3 because of dependence on H2O and Air
+#            Keff = A * (coszen ** B) * D*[H2O] / (D*[H2O] + E*[M])
+#   function = any other number =>
+#            Keff = 1.
+#

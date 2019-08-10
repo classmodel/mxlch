@@ -1,0 +1,147 @@
+&NAMRUN
+outdir          = 'EDD'
+time            = 43200 
+dtime           = 6 
+atime           = 60
+atime_vert      = 1800
+h_max           = 2000
+latt            = 42.5
+long            =-72.2
+day             = 262
+hour            =12.
+/
+
+&NAMDYN
+zi0             = 100.0
+beta            = 0.2
+wsls            = 0.0e-05
+wthetasmax      = 0.1
+c_fluxes        = .false.
+gamma           = 0.003
+lgamma          = .true. 
+hcrit           = 1000.
+gamma2          = 0.003
+thetam0         = 283.3
+dtheta0         = 2.0 
+advtheta        = 0.0e-5 
+pressure        = 1013.0
+wqsmax          = 0.1
+gammaq          = -1.80e-03
+qm0             =  5.7
+dq0             = -0.1
+advq            = 0.0e-5 
+ladvecFT        = .false.
+wcsmax          = -0.00
+gammac          = 0.0
+cm0             = 390000. 
+dc0             =  0000.
+z0              = 0.5
+uws0            =-0.09
+vws0            = 0
+gammau          = 0.00
+gammav          = 0
+um0             = 2.0
+vm0             = 2.0 
+ug              = 2.0
+vg              = 2.0
+/
+
+&NAMCHEM
+lchem           = .true.
+lcomplex        = .false.
+lwritepl        = .false.
+ldiuvar         = .true.
+h_ref           = 12.
+lflux           = .false.
+fluxstart       = 5.
+fluxend         = 17.
+lchconst        = .false.
+t_ref_cbl       = 298.
+p_ref_cbl       = 1000
+q_ref_cbl       = 10.0
+t_ref_ft        = 298.
+p_ref_ft        = 1000.
+q_ref_ft        = 10.0
+!pressure_ft     = 1013.0
+/
+
+&NAMISOTOPES
+lisotopes       = .true.
+theta_eq        = 0.75 
+/
+
+&NAMFLUX
+!offset_wt       = 0
+!offset_wq       = 0
+!function_wt     = 2
+!function_wq     = 0
+!starttime_wt    = 3600
+!endtime_wt      = 18000
+!starttime_wq    = 39600
+!endtime_wq      = 54000
+!starttime_chem  = 46800
+!endtime_chem    = 54000
+!starttime_adv   = 3600
+!endtime_adv     = 54000
+/
+
+&NAMSURFLAYER
+lsurfacelayer   = .true.
+z0m             = 2.0
+z0h             = 2.0
+/
+
+&NAMRAD
+lradiation = .true.
+cc         = 0.0
+S0         = 1368.
+albedo     = 0.15
+/
+
+&NAMSURFACE
+llandsurface = .true.
+Qtot         = -1000000
+Ts           = 284.
+w2           = 0.235
+wg           = 0.235
+wwilt        = 0.171
+wfc          = 0.323
+wsat         = 0.472
+CLa          = 0.219
+CLb          =  4.9
+CLc          =  4.0
+C1sat        = 0.132
+C2ref        = 1.8
+gD           = 0.3
+rsmin        = 500
+rssoilmin    = 50
+LAI          = 3.5
+cveg         = 0.75
+Tsoil        = 278.0
+T2           = 274.0
+Wl           = 0.0   
+Lambda       = 30.0
+CGsat        = 3.56e-6
+lrsAgs       = .true.
+lCO2Ags      = .true.
+CO2comp298   = 42.0
+Q10CO2       = 1.5
+gm298        = 7.0            
+Ammax298     = 2.2            
+Q10gm        = 2.0            
+T1gm         = 278.           
+T2gm         = 309.           
+Q10Am        = 2.0            
+T1Am         = 281.           
+T2Am         = 311.           
+f0           = 0.89           
+ad           = 0.07           
+alpha0       = 0.017          
+Kx           = 0.7            
+gmin         = 0.25e-3   
+Cw           = 0.0016
+wsmax        = 0.55  
+wsmin        = 0.005 
+R10          = 0.18  
+Eact0        = 53.3e3
+/
